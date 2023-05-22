@@ -1,0 +1,9 @@
+<!-- </ui> -->
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <file>resources/icons/trafficlight/greenlight.png</file>
+    <file>resources/icons/trafficlight/redlight.png</file>
+    <file>resources/icons/trafficlight/yellowlight.png</file>
+</qresource>
+</RCC>
