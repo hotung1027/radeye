@@ -19,7 +19,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtNetwork import QTcpSocket,QAbstractSocket
-from PySide6.QtCore import QFile, QIODevice, QThread, Signal, Slot, QObject
+from PySide6.QtCore import QFile, QIODevice, QThread, Signal, Slot, QObject,QTimer, QTimerEvent
 from PySide6.QtGui import QIcon,QPixmap
 import pyqtgraph as pg
 
@@ -42,7 +42,7 @@ REDLIGHT = u":/resources/icons/trafficlight/redlight.png"
 YELLOWLIGHT = u":/resources/icons/trafficlight/yellowlight.png"
 GREENLIGHT = u":/resources/icons/trafficlight/greenlight.png"
 
-
+s16i11 = lambda x : Fxp(f'0b{np.binary_repr(x,12)}',True,12,11,overflow='wrap').get_val()
 
 
 class radeye(QMainWindow):
@@ -53,14 +53,24 @@ class radeye(QMainWindow):
     def init_ui(self):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
         self.ui.addressText.textChanged.connect(update_hostname)
         self.ui.portText.textChanged.connect(update_port)
         self.ui.connectButton.clicked.connect(tcp_connect)
         ButtonGroup = self.ui.buttonGroup
         ButtonGroup.buttonClicked.connect(lambda button: buttonGroupCheckButton(button))
         self.ui.singleButton.clicked.connect(SINGLE)
-        self.ui.runButton.toggled.connect(RUN)
+        # self.ui.runButton.toggled.connect(SINGLE)
         self.ui.stopButton.toggled.connect(STOP)
+        self.ui.runButton.clicked.connect(RUN)
+        self.ui.applyButton.clicked.connect(update_size)
+        self.timer = QTimer()
+        self.timer.timeout.connect(RUN)
+        self.timer.start(100)
+
+
+
+
 
         self.show()
 
@@ -123,6 +133,13 @@ def update_port():
     print(PORT)
 
 @Slot()
+def update_size():
+    global client
+    size = int(window.ui.sizeText.toPlainText())
+    client.write(bytes("ConfigSize:{size}\n".format(size=size),'utf-8'))
+
+
+@Slot()
 def buttonGroupCheckButton(button):
 ## exclusive button group, only 1 button among group toggled at a time
     return
@@ -133,14 +150,21 @@ def buttonGroupCheckButton(button):
 #     button.nextCheckState()
 #     print(button.text())
 
+
+
 def RUN():
-    query_waveform()
+    global window,client
+    if window.ui.runButton.isChecked() and client.state() == SocketState.ConnectedState:
+    ## #TODO: ARM Ready signal
+        query_waveform()
+            
 
 def STOP():
     return
 
-def SINGLE():
-    query_waveform()
+def SINGLE(checked):
+    if checked:
+        query_waveform()
     
 
 def query_waveform():
@@ -164,11 +188,12 @@ def vectorize(array : np.ndarray, fn) -> np.ndarray:
 
 def get_waveform() -> bytearray:
     global y_data,x_data,waveform
-    y_data = client.readLine()
+    y_data = client.readLine() 
+    print(y_data)
     y_data = bytes(y_data).decode('utf-8').split(':')
+    print(y_data)
     y_data = np.array(y_data,dtype=np.int16)
-    si16 = lambda x : Fxp(bin(x),True,12,11).get_val()
-    y_data = vectorize(y_data, si16)
+    y_data = vectorize(y_data, s16i11)
     x_data = np.arange(0, len(y_data), 1)
     waveform.update_data(x_data,y_data)
 
@@ -177,8 +202,15 @@ def get_waveform() -> bytearray:
 def plot_waveform(x,y):
     global window
     window.ui.dataView.plotItem.plot(x,y,clear=True)
-    y_fft = np.fft.fft(y).real
-    window.ui.processView.plotItem.plot(x,y_fft,clear=True)
+    y_fft = np.fft.rfft(y)
+    fs = int(window.ui.sampleRateText.toPlainText())
+    L = len(y_fft)
+    f = fs * np.arange(0,L) / L/2
+    p2 = np.abs(y_fft/L)
+    # p1 = p2[0:int(L/2)]
+    # p1[2:-1] = 2*p1[2:-1]
+
+    window.ui.processView.plotItem.plot(f,p2,clear=True)
 
 
 
@@ -203,8 +235,13 @@ def main():
     app = QApplication(sys.argv)
     waveform = Data()
     window = radeye()
+    textedits = [window.ui.addressText,window.ui.portText,window.ui.sizeText,window.ui.sampleRateText]
+    assignPlaceHolderText = lambda obj: obj.setPlainText(obj.placeholderText())
+    for te in textedits:
+        assignPlaceHolderText(te)
 
     client.stateChanged.connect(lambda state : update_connection_status(state))
     client.readyRead.connect(get_waveform)
+
     waveform.dataChanged.connect(lambda x,y : plot_waveform(x,y))
     sys.exit(app.exec())
