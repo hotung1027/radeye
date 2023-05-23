@@ -23,6 +23,9 @@ test_sources = [
 
 requires = [
     "pyside6~=6.2",
+    "numpy",
+    "pyqtgraph",
+    "fxpmath"
 ]
 test_requires = [
     "pytest",
