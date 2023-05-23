@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'panelxhTGrB.ui'
+## Form generated from reading UI file 'paneldFjOTR.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.0
 ##
@@ -17,11 +17,11 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
     QPalette, QPixmap, QRadialGradient, QTransform)
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QFrame, QLabel,
     QListView, QMainWindow, QMenuBar, QProgressBar,
-    QPushButton, QRadioButton, QSizePolicy, QStatusBar,
-    QTabWidget, QTextEdit, QWidget)
+    QPushButton, QSizePolicy, QStatusBar, QTabWidget,
+    QTextEdit, QWidget)
 
 from pyqtgraph import PlotWidget
-import radeye.trafficlight
+# import trafficlight
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -87,28 +87,37 @@ class Ui_MainWindow(object):
         self.stopButton.setGeometry(QRect(70, 200, 80, 22))
         self.stopButton.setCheckable(True)
         self.stopButton.setChecked(True)
-        self.radioButton = QRadioButton(self.RxPanel)
-        self.radioButton.setObjectName(u"radioButton")
-        self.radioButton.setGeometry(QRect(70, 300, 99, 20))
+        self.applyButton = QPushButton(self.RxPanel)
+        self.applyButton.setObjectName(u"applyButton")
+        self.applyButton.setGeometry(QRect(80, 370, 80, 22))
+        self.applyButton.setCheckable(False)
+        self.applyButton.setChecked(False)
         self.trafficlight = QLabel(self.RxPanel)
         self.trafficlight.setObjectName(u"trafficlight")
         self.trafficlight.setGeometry(QRect(0, 0, 31, 51))
-        self.trafficlight.setPixmap(QPixmap(u":/resources/icons/trafficlight/redlight.png"))
         self.trafficlight.setScaledContents(True)
+        self.sizeLabel = QLabel(self.RxPanel)
+        self.sizeLabel.setObjectName(u"sizeLabel")
+        self.sizeLabel.setGeometry(QRect(0, 300, 61, 16))
+        self.sampleRateLabel = QLabel(self.RxPanel)
+        self.sampleRateLabel.setObjectName(u"sampleRateLabel")
+        self.sampleRateLabel.setGeometry(QRect(0, 340, 71, 16))
+        self.sizeText = QTextEdit(self.RxPanel)
+        self.sizeText.setObjectName(u"sizeText")
+        self.sizeText.setGeometry(QRect(80, 300, 151, 21))
+        self.sampleRateText = QTextEdit(self.RxPanel)
+        self.sampleRateText.setObjectName(u"sampleRateText")
+        self.sampleRateText.setGeometry(QRect(80, 340, 151, 21))
         self.tabWidget.addTab(self.RxPanel, "")
         self.progressBar = QProgressBar(self.centralwidget)
         self.progressBar.setObjectName(u"progressBar")
         self.progressBar.setGeometry(QRect(680, 560, 118, 23))
         self.progressBar.setValue(0)
         self.progressBar.setTextVisible(False)
-        self.CancelButton = QPushButton(self.centralwidget)
-        self.CancelButton.setObjectName(u"CancelButton")
-        self.CancelButton.setEnabled(False)
-        self.CancelButton.setGeometry(QRect(600, 560, 80, 23))
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 800, 19))
+        self.menubar.setGeometry(QRect(0, 0, 800, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -126,14 +135,19 @@ class Ui_MainWindow(object):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.RxControl), QCoreApplication.translate("MainWindow", u"Rx Control", None))
         self.connectButton.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
+        self.addressText.setPlaceholderText(QCoreApplication.translate("MainWindow", u"192.168.1.10", None))
+        self.portText.setPlaceholderText(QCoreApplication.translate("MainWindow", u"7", None))
         self.addressLabel.setText(QCoreApplication.translate("MainWindow", u"IP Address:", None))
         self.portLabel.setText(QCoreApplication.translate("MainWindow", u"Port:", None))
         self.singleButton.setText(QCoreApplication.translate("MainWindow", u"SINGLE", None))
         self.runButton.setText(QCoreApplication.translate("MainWindow", u"RUN", None))
         self.stopButton.setText(QCoreApplication.translate("MainWindow", u"STOP", None))
-        self.radioButton.setText(QCoreApplication.translate("MainWindow", u"RadioButton", None))
         self.trafficlight.setText("")
+        self.sizeLabel.setText(QCoreApplication.translate("MainWindow", u"Size:", None))
+        self.sampleRateLabel.setText(QCoreApplication.translate("MainWindow", u"SampleRate:", None))
+        self.sizeText.setPlaceholderText(QCoreApplication.translate("MainWindow", u"5000", None))
+        self.sampleRateText.setPlaceholderText(QCoreApplication.translate("MainWindow", u"250", None))
+        self.applyButton.setText(QCoreApplication.translate("MainWindow", u"APPLY", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.RxPanel), QCoreApplication.translate("MainWindow", u"Display", None))
-        self.CancelButton.setText(QCoreApplication.translate("MainWindow", u"Cancel", None))
     # retranslateUi
 

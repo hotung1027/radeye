@@ -4,11 +4,6 @@ import sys
 import numpy as np
 import time
 
-from matplotlib.backends.qt_compat import QtWidgets
-from matplotlib.backends.backend_qtagg import (
-    FigureCanvas, NavigationToolbar2QT as NavigationToolbar)
-from matplotlib.figure import Figure
-
 
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtUiTools import QUiLoader
@@ -107,6 +102,7 @@ def buttonGroupCheckButton(button):
 #     print(button.text())
 
 def RUN():
+    
     query_waveform()
 
 def STOP():
