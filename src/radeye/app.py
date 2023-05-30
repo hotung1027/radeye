@@ -81,7 +81,23 @@ class Data(QObject):
     def __init__(self):
         super(Data,self).__init__()
         self.x_data = []
-        self.y_data = []
+        self.y_data = b''
+
+    def flush(self):
+        self.x_data = []
+        self.y_data = b''
+
+    def concat(self,y):
+        self.y_data = self.y_data + y
+    
+    def confirm(self):
+        y_data = bytes(self.y_data).decode('utf-8').split(':')[0:-1]
+        y_data = np.array(y_data,dtype=np.int16)
+        y_data = vectorize(y_data, s16i11)
+        self.y_data = y_data
+        self.x_data = np.arange(0,len(self.y_data),1)
+        self.dataChanged.emit(self.x_data,self.y_data)
+                              
 
     def update_data(self,x,y):
         self.x_data = x
@@ -188,19 +204,20 @@ def vectorize(array : np.ndarray, fn) -> np.ndarray:
 
 def get_waveform() -> bytearray:
     global y_data,x_data,waveform
-    y_data = client.readLine() 
-    print(y_data)
-    y_data = bytes(y_data).decode('utf-8').split(':')
-    print(y_data)
-    y_data = np.array(y_data,dtype=np.int16)
-    y_data = vectorize(y_data, s16i11)
-    x_data = np.arange(0, len(y_data), 1)
-    waveform.update_data(x_data,y_data)
+    end = False
+    y_data = client.readLine()
+    if '\n' in bytes(y_data).decode("utf-8"):
+        end = True
 
+    # print(y_data)
+
+    waveform.concat(y_data)
+    if end:
+        waveform.confirm()
 
 
 def plot_waveform(x,y):
-    global window
+    global window,waveform
     window.ui.dataView.plotItem.plot(x,y,clear=True)
     y_fft = np.fft.rfft(y)
     fs = int(window.ui.sampleRateText.toPlainText())
@@ -209,8 +226,8 @@ def plot_waveform(x,y):
     p2 = np.abs(y_fft/L)
     # p1 = p2[0:int(L/2)]
     # p1[2:-1] = 2*p1[2:-1]
-
     window.ui.processView.plotItem.plot(f,p2,clear=True)
+    waveform.flush()
 
 
 
