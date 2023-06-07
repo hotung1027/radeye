@@ -2,9 +2,11 @@
 My first application
 """
 import sys
+from typing import Optional
 import numpy as np
 import time
-
+import logging
+from logging import debug,warning,error,info
 
 
 
@@ -19,30 +21,30 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtWidgets import QApplication, QMainWindow
 from PySide6.QtNetwork import QTcpSocket,QAbstractSocket
-from PySide6.QtCore import QFile, QIODevice, QThread, Signal, Slot, QObject,QTimer, QTimerEvent
+from PySide6.QtCore import QFile, QIODevice, QThread, Signal, Slot, QObject,QTimer, QTimerEvent,QEvent
+from PySide6.QtGui import (QMouseEvent)
 from PySide6.QtGui import QIcon,QPixmap
 import pyqtgraph as pg
 
-from radeye.ui_panel import Ui_MainWindow
+from radeye.panel_ui import Ui_MainWindow
 from radeye.trafficlight import *
 
 from fxpmath import Fxp
 
-SocketState = QAbstractSocket.SocketState()
 
-UI_PATH = "panel.ui"
-HOSTNAME = ""
-PORT = ""
-client = QTcpSocket()
-x_data = []
-y_data = []
-waveform = []
-window = []
-REDLIGHT = u":/resources/icons/trafficlight/redlight.png"
-YELLOWLIGHT = u":/resources/icons/trafficlight/yellowlight.png"
-GREENLIGHT = u":/resources/icons/trafficlight/greenlight.png"
+from radeye.ui        import REDLIGHT,YELLOWLIGHT,GREENLIGHT
+from plotly.graph_objects import Figure, Scatter
+import plotly.express as px
+import plotly
+import pandas as pd
+from radeye.attena_ui import Ui_AttenaUi
+from radeye.patch_ui  import Ui_PatchUi
+import radeye.attena_rc
+from qt_material import apply_stylesheet
+from radeye.components.component import TcpClient,Data,SocketState,Patch,Attena
+from radeye.ulti_fn import counterclockwise_phasearray_index
 
-s16i11 = lambda x : Fxp(f'0b{np.binary_repr(x,12)}',True,12,11,overflow='wrap').get_val()
+waveform      = Data()
 
 
 class radeye(QMainWindow):
@@ -53,181 +55,173 @@ class radeye(QMainWindow):
     def init_ui(self):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
+        self.client = TcpClient(self.ui)
+        self.client.socket.readyRead.connect(self.client.get_waveform(waveform))
+
         self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
-        self.ui.addressText.textChanged.connect(update_hostname)
-        self.ui.portText.textChanged.connect(update_port)
-        self.ui.connectButton.clicked.connect(tcp_connect)
-        ButtonGroup = self.ui.buttonGroup
-        ButtonGroup.buttonClicked.connect(lambda button: buttonGroupCheckButton(button))
-        self.ui.singleButton.clicked.connect(SINGLE)
-        # self.ui.runButton.toggled.connect(SINGLE)
-        self.ui.stopButton.toggled.connect(STOP)
-        self.ui.runButton.clicked.connect(RUN)
-        self.ui.applyButton.clicked.connect(update_size)
+        self.ui.addressText.textChanged.connect(lambda : self.client.update_hostname(self.ui.addressText.toPlainText()))
+        self.ui.portText.textChanged.connect(lambda : self.client.update_port(self.ui.portText.toPlainText()))
+        self.ui.connectButton.clicked.connect(self.client.tcp_connect)
+        self.ui.singleButton.clicked.connect(self.SINGLE)
+        self.ui.stopButton.toggled.connect(self.STOP)
+        self.ui.runButton.clicked.connect(self.RUN)
+        self.ui.applyButton.clicked.connect(self.client.update_size)
+        self.ui.rowsLineEdit.textChanged.connect(self.update_patch)
+        self.ui.columnsLineEdit.textChanged.connect(self.update_patch)
+        
+
+        self.antennas = [] 
+        self.patches = []
+        angle = (2.8125*np.arange(-127,128,1)).astype(str)
+        self.ui.thetaComboBox.addItems(angle)
+        self.ui.phiComboBox.addItems(angle)
+
+
+        self.ui.gridLayout.update()
+
         self.timer = QTimer()
-        self.timer.timeout.connect(RUN)
+        self.timer.timeout.connect(self.RUN)
         self.timer.start(100)
-
-
-
-
-
         self.show()
 
+    def update_antenna(self,antennas:list)->None:
+        if self.ui.gridLayout_2.count() > 0:
+            self.remove_antenna()
+            self.antennas = []
 
-class Data(QObject):
-    dataChanged = Signal(list, list)
+        print(antennas[0].objectName())
+        if any(word in antennas[0].objectName() for word in ["ll","lr"]) :
+            self.antennas  = counterclockwise_phasearray_index(antennas,2)
+        else:
+            self.antennas  = counterclockwise_phasearray_index(antennas,0)
+        
+        for i in range(0,len(antennas)):
+            self.antennas[i].show()
+            self.ui.gridLayout_2.addWidget(self.antennas[i],int(i/2),i%2)
 
-    def __init__(self):
-        super(Data,self).__init__()
-        self.x_data = []
-        self.y_data = b''
 
-    def flush(self):
-        self.x_data = []
-        self.y_data = b''
+        
 
-    def concat(self,y):
-        self.y_data = self.y_data + y
+    def remove_antenna(self)->None:
+        print(self.antennas)
+        for i in range(0,len(self.antennas)):
+            self.ui.gridLayout_2.removeWidget(self.antennas[i])
+            self.antennas[i].hide()
+
+
     
-    def confirm(self):
-        y_data = bytes(self.y_data).decode('utf-8').split(':')[0:-1]
-        y_data = np.array(y_data,dtype=np.int16)
-        y_data = vectorize(y_data, s16i11)
-        self.y_data = y_data
-        self.x_data = np.arange(0,len(self.y_data),1)
-        self.dataChanged.emit(self.x_data,self.y_data)
-                              
+    def change_patch_layout(self,)->None:
+        pass
 
-    def update_data(self,x,y):
-        self.x_data = x
-        self.y_data = y
-        self.dataChanged.emit(self.x_data,self.y_data)
-
-    def update_xdata(self, x):
-        self.x_data = x
-        self.dataChanged.emit(self.x_data,self.y_data)
-
-    def update_ydata(self, y):
-        self.y_data = y
-        self.dataChanged.emit(self.x_data,self.y_data)
-
-    def get_data(self):
-        return self.x_data, self.y_data
-
-
-
-@Slot()
-def tcp_connect():
-    client.connectToHost(HOSTNAME, PORT)
-    if client.waitForConnected(1000):
-        print("Connected")
-    else:
-        print("Not connected")
-
-
-@Slot()
-def update_connection_status(state : SocketState):
-    if state == SocketState.ConnectedState:
-        window.ui.trafficlight.setPixmap(QPixmap(GREENLIGHT))
-    elif state == SocketState.UnconnectedState:
-        window.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
-    else:
-        window.ui.trafficlight.setPixmap(QPixmap(YELLOWLIGHT))
-
-
-@Slot()
-def update_hostname():
-    global HOSTNAME
-    HOSTNAME = window.ui.addressText.toPlainText()
-    print(HOSTNAME)
-
-@Slot()
-def update_port():
-    global PORT
-    PORT = int(window.ui.portText.toPlainText())
-    print(PORT)
-
-@Slot()
-def update_size():
-    global client
-    size = int(window.ui.sizeText.toPlainText())
-    client.write(bytes("ConfigSize:{size}\n".format(size=size),'utf-8'))
-
-
-@Slot()
-def buttonGroupCheckButton(button):
-## exclusive button group, only 1 button among group toggled at a time
-    return
-#     for butt in ButtonGroup.buttons():
-#         if butt.isChecked():
-#             butt.nextCheckState()
-#             print(butt.text())
-#     button.nextCheckState()
-#     print(button.text())
-
-
-
-def RUN():
-    global window,client
-    if window.ui.runButton.isChecked() and client.state() == SocketState.ConnectedState:
-    ## #TODO: ARM Ready signal
-        query_waveform()
+    def add_patch(self,numberOfPatch: int)->None:
+        for i in range(0,numberOfPatch):
+            if i >= len(self.patches):
+                self.patches.append(Patch())            
+                self.patches[i].setObjectName("PatchCH{}".format(i+1))
+                self.patches[i].setupUi(self.patches[i])
+                self.patches[i].setStyleSheet(u"QFrame{\n"
+                    "border-image: url(:/resources/indicator/Preview - Bottom.png);\n"
+                    "}\n"
+                    "")
+            self.patches[i].changedActivatedAntenna.connect(self.update_antenna)
+            self.patches[i].show()
+            self.ui.gridLayout.addWidget(self.patches[i],int(i/int(self.ui.columnsLineEdit.text())),i%int(self.ui.columnsLineEdit.text()))
             
+        
+    def remove_patch(self,numberOfPatch:int)->None:
+        for i in reversed(range(0,numberOfPatch)):
+            self.ui.gridLayout.removeWidget(self.patches[i])
+            self.patches[i].hide()
+    
+    # def remove_patch(self,patches) -> None:
+    #     for patch in patches:
+    #         self.ui.gridLayout.removeWidget(patch)
+    #         patch.hide()
+                                        
 
-def STOP():
-    return
+    def update_patch(self)->None:
+        # format text to integer, if not integer erase then
+        if not self.ui.rowsLineEdit.text().isdigit():
+               self.ui.rowsLineEdit.setText("")
+        if not self.ui.columnsLineEdit.text().isdigit():
+               self.ui.columnsLineEdit.setText("")
+        # get the number of rows and columns
+        if self.ui.rowsLineEdit.text() != "" and self.ui.columnsLineEdit.text() != "":
+            nRows = int(self.ui.rowsLineEdit.text())
+            nCols = int(self.ui.columnsLineEdit.text())
+            if nRows * nCols > len(self.patches):
+                self.add_patch(nRows * nCols)
+            elif nRows * nCols < len(self.patches):
+                self.remove_patch(nRows * nCols)
 
-def SINGLE(checked):
-    if checked:
-        query_waveform()
+
+
+                       
+    def set_up_attena(self,attenas:int)->None:
+        if attenas > len(self.antennas):
+            self.add_attena(attenas - len(self.antennas))
+        elif attenas < len(self.antennas):
+            self.remove_attena(len(self.antennas) - attenas)
+
+    def RUN(self):
+        if self.ui.runButton.isChecked() and self.client.socket.state() == SocketState.ConnectedState:
+        ## #TODO: ARM Ready signal
+            self.client.send_waveform_query()
+                
+
+    def STOP(self):
+        return
+
+    def SINGLE(self,checked):
+        if checked:
+            self.client.send_waveform_query()
     
 
-def query_waveform():
-    client.write(b"Test\n")
-    print("Bytes Written")
-
-
-def twos_complement(bit):
-   fn = lambda x: x - 1 << bit if x > 1 << (bit-1) else x
-   return fn
-
-def vectorize(array : np.ndarray, fn) -> np.ndarray:
-    return np.array(
-        list(
-        map( fn,
-            array)
-        )
-    )
-
-
-
-def get_waveform() -> bytearray:
-    global y_data,x_data,waveform
-    end = False
-    y_data = client.readLine()
-    if '\n' in bytes(y_data).decode("utf-8"):
-        end = True
-
-    # print(y_data)
-
-    waveform.concat(y_data)
-    if end:
-        waveform.confirm()
 
 
 def plot_waveform(x,y):
     global window,waveform
+
+    df = pd.DataFrame(dict(
+        x= x,
+        y = y
+    ))
+    fig = px.line(df,x="sample",y="normalized Amplitude")
     window.ui.dataView.plotItem.plot(x,y,clear=True)
     y_fft = np.fft.rfft(y)
     fs = int(window.ui.sampleRateText.toPlainText())
     L = len(y_fft)
     f = fs * np.arange(0,L) / L/2
     p2 = np.abs(y_fft/L)
-    # p1 = p2[0:int(L/2)]
-    # p1[2:-1] = 2*p1[2:-1]
+
     window.ui.processView.plotItem.plot(f,p2,clear=True)
     waveform.flush()
+
+
+# def plot_waveform(x,y):
+#     global window,waveform
+
+#     df = pd.DataFrame(dict(
+#         x= x,
+#         y = y
+#     ))
+#     fig = px.line(df,x="sample",y="normalized Amplitude")
+
+#     html = "<html><body>"
+#     html += plotly.io.to_html(fig,include_plotlyjs=True,full_html=True)
+#     html += "</body></html>"
+#     window.ui.processView.setHtml(html)
+#     # y_fft = np.fft.rfft(y)
+#     # fs = int(window.ui.sampleRateText.toPlainText())
+#     # L = len(y_fft)
+#     # f = fs * np.arange(0,L) / L/2
+#     # p2 = np.abs(y_fft/L)
+
+#     # window.ui.processView.plotItem.plot(f,p2,clear=True)
+#     waveform.flush()
+
+
+
 
 
 
@@ -250,15 +244,15 @@ def main():
 
     QApplication.setApplicationName(metadata['Formal-Name'])
     app = QApplication(sys.argv)
-    waveform = Data()
     window = radeye()
+
+
     textedits = [window.ui.addressText,window.ui.portText,window.ui.sizeText,window.ui.sampleRateText]
     assignPlaceHolderText = lambda obj: obj.setPlainText(obj.placeholderText())
     for te in textedits:
         assignPlaceHolderText(te)
-
-    client.stateChanged.connect(lambda state : update_connection_status(state))
-    client.readyRead.connect(get_waveform)
-
+    # filter = MousePressEventFilter()
+    # window.installEventFilter(filter)
     waveform.dataChanged.connect(lambda x,y : plot_waveform(x,y))
+    # apply_stylesheet(app, theme='dark_teal.xml')
     sys.exit(app.exec())

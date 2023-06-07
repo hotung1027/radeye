@@ -1,0 +1,10 @@
+<!-- </ui> -->
+<!DOCTYPE RCC>
+<RCC version="1.0">
+<qresource>
+    <file>resources/indicator/ADAR1000.png</file>
+    <file>resources/indicator/ADAR1000_upsidedown.png</file>
+    <file>resources/indicator/antenna.png</file>
+    <file>resources/indicator/Preview - Bottom.png</file>
+</qresource>
+</RCC>

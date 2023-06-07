@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>AttenaUi</class>
+ <widget class="QWidget" name="AttenaUi">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>120</width>
+    <height>143</height>
+   </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>120</width>
+    <height>143</height>
+   </size>
+  </property>
+  <property name="windowTitle">
+   <string>Channel</string>
+  </property>
+  <widget class="QLabel" name="phaseLabel">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>20</y>
+     <width>57</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Phase</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="offsetLabel">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>50</y>
+     <width>57</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Offset</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="gainLabel">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>80</y>
+     <width>57</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Gain</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="attenCheckBox">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>100</y>
+     <width>85</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Atten</string>
+   </property>
+  </widget>
+  <widget class="QCheckBox" name="txrxCheckBox">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>100</y>
+     <width>85</width>
+     <height>20</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>RX</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="channelLabel">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>0</y>
+     <width>31</width>
+     <height>16</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Ch1</string>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="phaseComboBox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>20</y>
+     <width>79</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="editable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="offsetComboBox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>50</y>
+     <width>79</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="editable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QComboBox" name="gainComboBox">
+   <property name="geometry">
+    <rect>
+     <x>40</x>
+     <y>80</y>
+     <width>79</width>
+     <height>22</height>
+    </rect>
+   </property>
+   <property name="editable">
+    <bool>true</bool>
+   </property>
+  </widget>
+  <widget class="QLabel" name="gainInfo">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>120</y>
+     <width>57</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Gain</string>
+   </property>
+  </widget>
+  <widget class="QLabel" name="phaseInfo">
+   <property name="geometry">
+    <rect>
+     <x>60</x>
+     <y>120</y>
+     <width>57</width>
+     <height>14</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>phase</string>
+   </property>
+  </widget>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

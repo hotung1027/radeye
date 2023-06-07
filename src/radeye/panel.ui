@@ -6,328 +6,528 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>800</width>
-    <height>626</height>
+    <width>612</width>
+    <height>548</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Preferred">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
-  <widget class="QWidget" name="centralwidget">
-   <widget class="QTabWidget" name="tabWidget">
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>801</width>
-      <height>561</height>
-     </rect>
-    </property>
-    <property name="layoutDirection">
-     <enum>Qt::LeftToRight</enum>
-    </property>
-    <property name="currentIndex">
-     <number>1</number>
-    </property>
-    <widget class="QWidget" name="RxControl">
-     <attribute name="title">
-      <string>Rx Control</string>
-     </attribute>
-     <widget class="QListView" name="listView">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>131</width>
-        <height>551</height>
-       </rect>
+  <widget class="QWidget" name="centralWidget">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
+   <layout class="QGridLayout" name="gridLayout_6">
+    <item row="0" column="0">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="layoutDirection">
+       <enum>Qt::LeftToRight</enum>
       </property>
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="RxPanel">
+       <attribute name="title">
+        <string>Display</string>
+       </attribute>
+       <layout class="QGridLayout" name="gridLayout_3">
+        <item row="0" column="0">
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <item>
+           <widget class="QFrame" name="frame_2">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Minimum" vsizetype="MinimumExpanding">
+              <horstretch>0</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>250</width>
+              <height>325</height>
+             </size>
+            </property>
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <widget class="QLabel" name="trafficlight">
+             <property name="geometry">
+              <rect>
+               <x>0</x>
+               <y>0</y>
+               <width>31</width>
+               <height>51</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string/>
+             </property>
+             <property name="pixmap">
+              <pixmap resource="trafficlight.qrc">:/resources/icons/trafficlight/redlight.png</pixmap>
+             </property>
+             <property name="scaledContents">
+              <bool>true</bool>
+             </property>
+            </widget>
+            <widget class="QLabel" name="addressLabel">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>50</y>
+               <width>71</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>IP Address:</string>
+             </property>
+            </widget>
+            <widget class="QTextEdit" name="addressText">
+             <property name="geometry">
+              <rect>
+               <x>80</x>
+               <y>50</y>
+               <width>151</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="placeholderText">
+              <string>192.168.1.10</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="portLabel">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>70</y>
+               <width>61</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Port:</string>
+             </property>
+            </widget>
+            <widget class="QTextEdit" name="portText">
+             <property name="geometry">
+              <rect>
+               <x>80</x>
+               <y>70</y>
+               <width>151</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="placeholderText">
+              <string>7</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="connectButton">
+             <property name="geometry">
+              <rect>
+               <x>80</x>
+               <y>100</y>
+               <width>80</width>
+               <height>23</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Connect</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="runButton">
+             <property name="geometry">
+              <rect>
+               <x>20</x>
+               <y>130</y>
+               <width>80</width>
+               <height>22</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>RUN</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="flat">
+              <bool>false</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+            <widget class="QPushButton" name="singleButton">
+             <property name="geometry">
+              <rect>
+               <x>110</x>
+               <y>130</y>
+               <width>80</width>
+               <height>22</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>SINGLE</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+            <widget class="QPushButton" name="stopButton">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>160</y>
+               <width>80</width>
+               <height>22</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>STOP</string>
+             </property>
+             <property name="checkable">
+              <bool>true</bool>
+             </property>
+             <property name="checked">
+              <bool>true</bool>
+             </property>
+             <attribute name="buttonGroup">
+              <string notr="true">buttonGroup</string>
+             </attribute>
+            </widget>
+            <widget class="QLabel" name="sizeLabel">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>210</y>
+               <width>61</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>Size:</string>
+             </property>
+            </widget>
+            <widget class="QTextEdit" name="sizeText">
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>210</y>
+               <width>151</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="placeholderText">
+              <string>5000</string>
+             </property>
+            </widget>
+            <widget class="QLabel" name="sampleRateLabel">
+             <property name="geometry">
+              <rect>
+               <x>10</x>
+               <y>250</y>
+               <width>81</width>
+               <height>16</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>SampleRate:</string>
+             </property>
+            </widget>
+            <widget class="QTextEdit" name="sampleRateText">
+             <property name="geometry">
+              <rect>
+               <x>90</x>
+               <y>250</y>
+               <width>151</width>
+               <height>21</height>
+              </rect>
+             </property>
+             <property name="placeholderText">
+              <string>250</string>
+             </property>
+            </widget>
+            <widget class="QPushButton" name="applyButton">
+             <property name="geometry">
+              <rect>
+               <x>70</x>
+               <y>280</y>
+               <width>80</width>
+               <height>22</height>
+              </rect>
+             </property>
+             <property name="text">
+              <string>APPLY</string>
+             </property>
+             <property name="checkable">
+              <bool>false</bool>
+             </property>
+             <property name="checked">
+              <bool>false</bool>
+             </property>
+            </widget>
+           </widget>
+          </item>
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <widget class="PlotWidget" name="dataView"/>
+            </item>
+            <item>
+             <widget class="PlotWidget" name="processView"/>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="RxControl">
+       <attribute name="title">
+        <string>Rx Control</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
+          <item>
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QFrame" name="frame">
+              <property name="sizePolicy">
+               <sizepolicy hsizetype="Preferred" vsizetype="Preferred">
+                <horstretch>0</horstretch>
+                <verstretch>0</verstretch>
+               </sizepolicy>
+              </property>
+              <property name="minimumSize">
+               <size>
+                <width>300</width>
+                <height>100</height>
+               </size>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>166655</width>
+                <height>166655</height>
+               </size>
+              </property>
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <widget class="QLineEdit" name="rowsLineEdit">
+               <property name="geometry">
+                <rect>
+                 <x>60</x>
+                 <y>40</y>
+                 <width>81</width>
+                 <height>22</height>
+                </rect>
+               </property>
+              </widget>
+              <widget class="QLabel" name="label">
+               <property name="geometry">
+                <rect>
+                 <x>10</x>
+                 <y>10</y>
+                 <width>57</width>
+                 <height>14</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>theta</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="label_2">
+               <property name="geometry">
+                <rect>
+                 <x>160</x>
+                 <y>20</y>
+                 <width>57</width>
+                 <height>14</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>phi</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="label_5">
+               <property name="geometry">
+                <rect>
+                 <x>10</x>
+                 <y>40</y>
+                 <width>57</width>
+                 <height>14</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>rows</string>
+               </property>
+              </widget>
+              <widget class="QLabel" name="label_6">
+               <property name="geometry">
+                <rect>
+                 <x>160</x>
+                 <y>40</y>
+                 <width>57</width>
+                 <height>14</height>
+                </rect>
+               </property>
+               <property name="text">
+                <string>columns</string>
+               </property>
+              </widget>
+              <widget class="QLineEdit" name="columnsLineEdit">
+               <property name="geometry">
+                <rect>
+                 <x>220</x>
+                 <y>40</y>
+                 <width>81</width>
+                 <height>22</height>
+                </rect>
+               </property>
+              </widget>
+              <widget class="QComboBox" name="thetaComboBox">
+               <property name="geometry">
+                <rect>
+                 <x>60</x>
+                 <y>10</y>
+                 <width>81</width>
+                 <height>21</height>
+                </rect>
+               </property>
+              </widget>
+              <widget class="QComboBox" name="phiComboBox">
+               <property name="geometry">
+                <rect>
+                 <x>220</x>
+                 <y>10</y>
+                 <width>81</width>
+                 <height>21</height>
+                </rect>
+               </property>
+              </widget>
+             </widget>
+            </item>
+            <item>
+             <widget class="QFrame" name="frame_3">
+              <property name="frameShape">
+               <enum>QFrame::StyledPanel</enum>
+              </property>
+              <property name="frameShadow">
+               <enum>QFrame::Raised</enum>
+              </property>
+              <layout class="QGridLayout" name="gridLayout_2">
+               <property name="leftMargin">
+                <number>0</number>
+               </property>
+               <property name="topMargin">
+                <number>0</number>
+               </property>
+               <property name="rightMargin">
+                <number>0</number>
+               </property>
+               <property name="bottomMargin">
+                <number>0</number>
+               </property>
+              </layout>
+             </widget>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <widget class="QFrame" name="frame_4">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+            <layout class="QGridLayout" name="gridLayout">
+             <property name="leftMargin">
+              <number>0</number>
+             </property>
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="rightMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
+              <number>0</number>
+             </property>
+            </layout>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="Control">
+       <attribute name="title">
+        <string>Control</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <layout class="QGridLayout" name="gridLayout_4">
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_5">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+        <item>
+         <layout class="QGridLayout" name="gridLayout_5">
+          <item row="0" column="0">
+           <widget class="QFrame" name="frame_6">
+            <property name="frameShape">
+             <enum>QFrame::StyledPanel</enum>
+            </property>
+            <property name="frameShadow">
+             <enum>QFrame::Raised</enum>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
      </widget>
-     <widget class="QFrame" name="frame">
-      <property name="geometry">
-       <rect>
-        <x>130</x>
-        <y>0</y>
-        <width>671</width>
-        <height>531</height>
-       </rect>
-      </property>
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
-      <property name="frameShadow">
-       <enum>QFrame::Raised</enum>
-      </property>
-     </widget>
-    </widget>
-    <widget class="QWidget" name="RxPanel">
-     <attribute name="title">
-      <string>Display</string>
-     </attribute>
-     <widget class="QPushButton" name="connectButton">
-      <property name="geometry">
-       <rect>
-        <x>70</x>
-        <y>120</y>
-        <width>80</width>
-        <height>23</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Connect</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="addressText">
-      <property name="geometry">
-       <rect>
-        <x>70</x>
-        <y>60</y>
-        <width>151</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="placeholderText">
-       <string>192.168.1.10</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="portText">
-      <property name="geometry">
-       <rect>
-        <x>70</x>
-        <y>90</y>
-        <width>151</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="placeholderText">
-       <string>7</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="addressLabel">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>60</y>
-        <width>71</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>IP Address:</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="portLabel">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>90</y>
-        <width>61</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Port:</string>
-      </property>
-     </widget>
-     <widget class="PlotWidget" name="processView">
-      <property name="geometry">
-       <rect>
-        <x>240</x>
-        <y>0</y>
-        <width>561</width>
-        <height>261</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="PlotWidget" name="dataView">
-      <property name="geometry">
-       <rect>
-        <x>240</x>
-        <y>260</y>
-        <width>561</width>
-        <height>271</height>
-       </rect>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="singleButton">
-      <property name="geometry">
-       <rect>
-        <x>120</x>
-        <y>160</y>
-        <width>80</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>SINGLE</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <attribute name="buttonGroup">
-       <string notr="true">buttonGroup</string>
-      </attribute>
-     </widget>
-     <widget class="QPushButton" name="runButton">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>160</y>
-        <width>80</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>RUN</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="flat">
-       <bool>false</bool>
-      </property>
-      <attribute name="buttonGroup">
-       <string notr="true">buttonGroup</string>
-      </attribute>
-     </widget>
-     <widget class="QPushButton" name="stopButton">
-      <property name="geometry">
-       <rect>
-        <x>70</x>
-        <y>200</y>
-        <width>80</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>STOP</string>
-      </property>
-      <property name="checkable">
-       <bool>true</bool>
-      </property>
-      <property name="checked">
-       <bool>true</bool>
-      </property>
-      <attribute name="buttonGroup">
-       <string notr="true">buttonGroup</string>
-      </attribute>
-     </widget>
-     <widget class="QLabel" name="trafficlight">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>31</width>
-        <height>51</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="pixmap">
-       <pixmap resource="trafficlight.qrc">:/resources/icons/trafficlight/redlight.png</pixmap>
-      </property>
-      <property name="scaledContents">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QLabel" name="sizeLabel">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>300</y>
-        <width>61</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>Size:</string>
-      </property>
-     </widget>
-     <widget class="QLabel" name="sampleRateLabel">
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>340</y>
-        <width>71</width>
-        <height>16</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>SampleRate:</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="sizeText">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>300</y>
-        <width>151</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="placeholderText">
-       <string>5000</string>
-      </property>
-     </widget>
-     <widget class="QTextEdit" name="sampleRateText">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>340</y>
-        <width>151</width>
-        <height>21</height>
-       </rect>
-      </property>
-      <property name="placeholderText">
-       <string>250</string>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="applyButton">
-      <property name="geometry">
-       <rect>
-        <x>80</x>
-        <y>370</y>
-        <width>80</width>
-        <height>22</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string>APPLY</string>
-      </property>
-      <property name="checkable">
-       <bool>false</bool>
-      </property>
-      <property name="checked">
-       <bool>false</bool>
-      </property>
-     </widget>
-    </widget>
-   </widget>
-   <widget class="QProgressBar" name="progressBar">
-    <property name="geometry">
-     <rect>
-      <x>680</x>
-      <y>560</y>
-      <width>118</width>
-      <height>23</height>
-     </rect>
-    </property>
-    <property name="value">
-     <number>0</number>
-    </property>
-    <property name="textVisible">
-     <bool>false</bool>
-    </property>
-   </widget>
+    </item>
+   </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>800</width>
-     <height>22</height>
+     <width>612</width>
+     <height>19</height>
     </rect>
    </property>
   </widget>
@@ -342,6 +542,7 @@
  </customwidgets>
  <resources>
   <include location="trafficlight.qrc"/>
+  <include location="attena.qrc"/>
  </resources>
  <connections/>
  <buttongroups>
