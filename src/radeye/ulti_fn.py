@@ -26,3 +26,16 @@ def counterclockwise_phasearray_index(array:list,rot:int):
    index = np.array(items)
    index = index[[0,3,1,2]]
    return index
+
+def apply_map(funcs:list,values:list):
+    for fn,value in zip(funcs,values):
+        fn(value)
+        
+def split_patches(array:np.ndarray,size_x,size_y):
+    return np.array(
+        [
+            array[i:i+size_x,j:j+size_y]
+            for i in range(0,array.shape[0],size_x)
+            for j in range(0,array.shape[1],size_y)
+        ]
+    )

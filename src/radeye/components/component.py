@@ -9,12 +9,14 @@ from radeye.ui import REDLIGHT, YELLOWLIGHT, GREENLIGHT
 import math
 from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
+from radeye.ulti_fn import counterclockwise_phasearray_index,split_patches
 
 
 
 SocketState = QAbstractSocket.SocketState()
-GAIN = np.arange(0,101,1)
-ANGLE = np.arange(-50,51,1)
+GAIN = np.arange(1,101,1) * 1.27
+OFFSET = np.arange(-127,128,1) * 2.8125
+ANGLE = np.arange(-127,128,1) * 2.8125
 
 class Data(QObject):
     dataChanged = Signal(list, list)
@@ -125,14 +127,15 @@ class TcpClient(QObject):
 class Attena(Ui_AttenaUi):
     def __init__(self, parent: QObject | None = ...) -> None:
         super(Attena, self).__init__()
-        self.gain = Signal()
-        self.phase = Signal()
-        self.offset = Signal()
-        self.channel = Signal()
-        self.mode = Signal()
-        self.attenuation = Signal()
-        self.activated = Signal()
-        self.deactivated = Signal()
+        self.gain = 0
+        self.phase = 0
+        self.offset = 0
+        self.channel = 0
+        self.mode = 0
+        self.attenuation = 0
+        self.activated = 0
+        self.deactivated = 0
+        self.config = dict()
 
 
     def setupUi(self,antennaUI):
@@ -140,15 +143,28 @@ class Attena(Ui_AttenaUi):
         self.gainComboBox.addItems([str(i) for i in GAIN])
         self.offsetComboBox.addItems([str(i) for i in ANGLE])
         self.phaseComboBox.addItems([str(i) for i in ANGLE])   
-        # print(self.objectName())
-        # self.gain = dict['gain']
-        # self.phase = dict['phase']
-        # self.offset = dict['offset']
-        # self.channel = dict['channel']
-        # self.mode = dict['mode']
+        self.gain = self.config['gain']
+        self.phase = self.config['phase']
+        self.offset = self.config['offset']
+        self.mode = self.config['mode']
+        self.gainComboBox.currentTextChanged(lambda text: self.update_gain(float(text)))
+        self.offsetComboBox.currentTextChanged(lambda text: self.update_offset(float(text)))
+        self.phaseComboBox.currentTextChanged(lambda text: self.update_phase(float(text)))
+        
+    
+    def update_gain(self, gain:float)->None:
+        self.gain = gain
+        self.config['gain'] = self.gain
+        
+    def update_phase(self, phase:float)->None:
+        self.phase = phase
+        self.config['phase'] = self.phase
+        
+    def update_offset(self, offset):
+        self.offset = offset
+        self.config['offset'] = self.offset
 
-
-    def convert_phase(x, y):            
+    def convert_phase(phase, offset):            
         phase = phase - 127
         offset = offset - 127
         result = phase + offset
@@ -191,10 +207,35 @@ class Patch(Ui_PatchUi):
 
     def get_attenas(self):
         return self.array
+    
+    def findClosetFromItems(self,items:list[any],point:any)->int:
+        return np.argmin(np.linalg.norm(items-point,2,axis=1))
+    
+    
+    def apply(self,phases):
+        phases = self.parse(phases)
+        for key,phase in zip(self.keys,phases):
+            if any(key in word  for word in ["ll", "lr"]):
+                antennas = counterclockwise_phasearray_index(self.array[key], 2)
+            else:
+                antennas = counterclockwise_phasearray_index(self.array[key], 0)
+            for antenna,phase in zip(antennas,phase.flatten()):
+                antenna.phaseComboBox.setCurrentIndex(self.findClosetFromItems(ANGLE,phase))
 
     # parsing phrase into patch configuration with offset
-    def parse():
-        pass
+    def parse(self,phase):
+        """
+        Split phases into 4 2x2 patches
+        -------------
+        | x x | x x |
+        | x x | x x |
+        -------------
+        | x x | x x |
+        | x x | x x |
+        -------------
+        """
+        return split_patches(phase,2,2)
+        
 
 
 class MousePressEventFilter(QObject):
