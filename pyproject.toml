@@ -25,7 +25,12 @@ requires = [
     "pyside6~=6.2",
     "numpy",
     "pyqtgraph",
-    "fxpmath"
+    "fxpmath",
+    "pyopengl",
+    "plotly",
+    "pandas",
+    "scipy",
+    "matplotlib"
 ]
 test_requires = [
     "pytest",
