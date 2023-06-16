@@ -55,12 +55,12 @@ from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
 from radeye.panel_ui import Ui_MainWindow
 from radeye.components.component import TcpClient, Data, SocketState, Patch, Attena
-from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map
+from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map , split_channels
 import radeye.attena_rc
 # from qt_material import apply_stylesheet
 
 from radeye.phasearray.antenna.antenna import  param_keys
-from radeye.phasearray.antenna.pattern import CalPattern
+from radeye.phasearray.antenna.pattern import CalPattern,calculate_phaseshift
 
 waveform = Data()
 
@@ -87,16 +87,17 @@ class radeye(QMainWindow):
         self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
         self.client = TcpClient(self.ui)
         self.client.socket.readyRead.connect(self.client.get_waveform(waveform))
-        self.ui.addressText.textChanged.connect(
-            lambda: self.client.update_hostname(self.ui.addressText.toPlainText())
+        self.ui.addressText.editingFinished.connect(
+            lambda: self.client.update_hostname(self.ui.addressText.text())
         )
-        self.ui.portText.textChanged.connect(
-            lambda: self.client.update_port(self.ui.portText.toPlainText())
+        self.ui.portText.editingFinished.connect(
+            lambda: self.client.update_port(self.ui.portText.text())
         )
         self.ui.connectButton.clicked.connect(self.client.tcp_connect)
         self.ui.singleButton.clicked.connect(self.SINGLE)
         self.ui.stopButton.toggled.connect(self.STOP)
         self.ui.runButton.clicked.connect(self.RUN)
+        self.ui.sizeText.editingFinished.connect(self.client.update_size)
 
         """
          TODO: add function to update the size of the patch
@@ -110,6 +111,8 @@ class radeye(QMainWindow):
         self.calpattern_thread = QThread()
         self.calpattern.patternReady.connect(self.update_figure)
         self.calpattern.configUpdated.connect(self.calpattern.cal_pattern)
+
+        self.ui.polardirection.addItems(["clockwise", "anticlockwise"])
 
         # self.calpattern.configUpdated.connect(self.calpattern_thread.start())
 
@@ -223,7 +226,10 @@ class radeye(QMainWindow):
         self.ui.hs_angleaz.valueChanged.connect(self.az_hs_moved)
         self.ui.dsb_angleel.valueChanged.connect(self.el_changed)
         self.ui.hs_angleel.valueChanged.connect(self.el_hs_moved)
-        
+
+        self.ui.dsb_angleaz.valueChanged.connect(self.update_phase)
+        self.ui.dsb_angleel.valueChanged.connect(self.update_phase)
+
         self.ui.rbsb_azimuth.valueChanged.connect(self.fix_az_changed)
         self.ui.rbhs_azimuth.valueChanged.connect(self.fix_az_hs_moved)
         self.ui.rbsb_elevation.valueChanged.connect(self.fix_el_changed)
@@ -427,7 +433,8 @@ class radeye(QMainWindow):
         self.ui.spinBox_polarMinAmp.setValue(value)
         self.polarAmpOffset = -value
         self.update_pattern()
-        
+    
+
         
 
     def init_figure(self):
@@ -713,6 +720,22 @@ class radeye(QMainWindow):
     """
     Beamforming Panel Configuration
     """
+    def update_phase(self):
+        theta = self.ui.dsb_angleaz.value()
+        phi = self.ui.dsb_angleel.value()
+        print(theta,phi)
+        phase = calculate_phaseshift(self.array_config,theta,phi)
+        """
+        1 Patches has 4x4 Antennas
+        """
+        size_x  = self.array_config['size_x']
+        size_y  = self.array_config['size_y']
+        channels = split_channels(phase,4,4)
+       
+        for patch,channel in zip(self.patches,channels):
+            patch.set_phases(channel)
+
+
     
     def update_antenna(self, antennas: list) -> None:
         if self.ui.channelGrid.count() > 0:
@@ -754,6 +777,7 @@ class radeye(QMainWindow):
                     ""
                 )
             self.patches[i].changedActivatedAntenna.connect(self.update_antenna)
+            # TODO: reassign ComPorts
             self.ui.panelGrid.addWidget(
                 self.patches[i],
                 int(i / int(size_x/4)),
@@ -765,6 +789,7 @@ class radeye(QMainWindow):
         for i in reversed(range(0, numberOfPatch)):
             self.ui.panelGrid.removeWidget(self.patches[i])
             self.patches[i].hide()
+            # TODO: disconnect ComPorts 
 
 
     def update_patch(self) -> None:

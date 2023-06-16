@@ -36,7 +36,7 @@
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="RxPanel">
        <attribute name="title">
@@ -597,14 +597,17 @@
                              <height>20</height>
                             </size>
                            </property>
+                           <property name="decimals">
+                            <number>3</number>
+                           </property>
                            <property name="minimum">
-                            <double>0.250000000000000</double>
+                            <double>0.001000000000000</double>
                            </property>
                            <property name="maximum">
                             <double>10.000000000000000</double>
                            </property>
                            <property name="singleStep">
-                            <double>0.250000000000000</double>
+                            <double>0.001000000000000</double>
                            </property>
                           </widget>
                          </item>
@@ -871,17 +874,20 @@
                              <height>20</height>
                             </size>
                            </property>
+                           <property name="decimals">
+                            <number>3</number>
+                           </property>
                            <property name="minimum">
-                            <double>0.250000000000000</double>
+                            <double>0.001000000000000</double>
                            </property>
                            <property name="maximum">
                             <double>10.000000000000000</double>
                            </property>
                            <property name="singleStep">
-                            <double>0.250000000000000</double>
+                            <double>0.001000000000000</double>
                            </property>
                            <property name="value">
-                            <double>0.250000000000000</double>
+                            <double>0.001000000000000</double>
                            </property>
                           </widget>
                          </item>
@@ -1095,7 +1101,7 @@
                     </size>
                    </property>
                    <property name="title">
-                    <string>Plot Config</string>
+                    <string>Beam Config</string>
                    </property>
                    <layout class="QVBoxLayout" name="plotConfigLayout">
                     <item>
@@ -1255,6 +1261,18 @@
                           <number>100</number>
                          </property>
                         </widget>
+                       </item>
+                      </layout>
+                     </widget>
+                    </item>
+                    <item>
+                     <widget class="QGroupBox" name="polarGroupBox">
+                      <property name="title">
+                       <string>Polarization</string>
+                      </property>
+                      <layout class="QGridLayout" name="gridLayout_2">
+                       <item row="0" column="0">
+                        <widget class="QComboBox" name="polardirection"/>
                        </item>
                       </layout>
                      </widget>
@@ -1604,7 +1622,7 @@
      <x>0</x>
      <y>0</y>
      <width>1003</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
   </widget>

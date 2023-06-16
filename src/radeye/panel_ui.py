@@ -3,28 +3,19 @@
 ################################################################################
 ## Form generated from reading UI file 'panel.ui'
 ##
-## Created by: Qt User Interface Compiler version 6.5.0
+## Created by: Qt User Interface Compiler version 5.15.3
 ##
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
-    QMetaObject, QObject, QPoint, QRect,
-    QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
-from PySide6.QtWidgets import (QApplication, QButtonGroup, QComboBox, QDoubleSpinBox,
-    QFrame, QGridLayout, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QRadioButton, QSizePolicy, QSlider,
-    QSpacerItem, QSpinBox, QStatusBar, QTabWidget,
-    QVBoxLayout, QWidget)
+from PySide2.QtCore import *
+from PySide2.QtGui import *
+from PySide2.QtWidgets import *
 
 from pyqtgraph import PlotWidget
-import radeye.trafficlight_rc
-import radeye.attena_rc
+
+import trafficlight_rc
+import attena_rc
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -366,9 +357,10 @@ class Ui_MainWindow(object):
         self.dsb_spacingx = QDoubleSpinBox(self.gb_horizontal)
         self.dsb_spacingx.setObjectName(u"dsb_spacingx")
         self.dsb_spacingx.setMinimumSize(QSize(0, 20))
-        self.dsb_spacingx.setMinimum(0.250000000000000)
+        self.dsb_spacingx.setDecimals(3)
+        self.dsb_spacingx.setMinimum(0.001000000000000)
         self.dsb_spacingx.setMaximum(10.000000000000000)
-        self.dsb_spacingx.setSingleStep(0.250000000000000)
+        self.dsb_spacingx.setSingleStep(0.001000000000000)
 
         self.horizontalLayout_14.addWidget(self.dsb_spacingx)
 
@@ -521,10 +513,11 @@ class Ui_MainWindow(object):
         self.dsb_spacingy = QDoubleSpinBox(self.gb_vertical)
         self.dsb_spacingy.setObjectName(u"dsb_spacingy")
         self.dsb_spacingy.setMinimumSize(QSize(0, 20))
-        self.dsb_spacingy.setMinimum(0.250000000000000)
+        self.dsb_spacingy.setDecimals(3)
+        self.dsb_spacingy.setMinimum(0.001000000000000)
         self.dsb_spacingy.setMaximum(10.000000000000000)
-        self.dsb_spacingy.setSingleStep(0.250000000000000)
-        self.dsb_spacingy.setValue(0.250000000000000)
+        self.dsb_spacingy.setSingleStep(0.001000000000000)
+        self.dsb_spacingy.setValue(0.001000000000000)
 
         self.horizontalLayout_17.addWidget(self.dsb_spacingy)
 
@@ -736,6 +729,18 @@ class Ui_MainWindow(object):
 
         self.plotConfigLayout.addWidget(self.gb_steering)
 
+        self.polarGroupBox = QGroupBox(self.gb_plotconfig)
+        self.polarGroupBox.setObjectName(u"polarGroupBox")
+        self.gridLayout_2 = QGridLayout(self.polarGroupBox)
+        self.gridLayout_2.setObjectName(u"gridLayout_2")
+        self.polardirection = QComboBox(self.polarGroupBox)
+        self.polardirection.setObjectName(u"polardirection")
+
+        self.gridLayout_2.addWidget(self.polardirection, 0, 0, 1, 1)
+
+
+        self.plotConfigLayout.addWidget(self.polarGroupBox)
+
         self.gb_plot = QGroupBox(self.gb_plotconfig)
         self.gb_plot.setObjectName(u"gb_plot")
         sizePolicy3.setHeightForWidth(self.gb_plot.sizePolicy().hasHeightForWidth())
@@ -937,6 +942,7 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_3.addWidget(self.panelGroupBox)
 
+        self.horizontalLayout_3.setStretch(1, 1)
         self.tabWidget.addTab(self.BeamformingConfig, "")
 
         self.gridLayout_6.addWidget(self.tabWidget, 0, 0, 1, 1)
@@ -944,7 +950,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1003, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1003, 19))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -952,7 +958,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
 
-        self.tabWidget.setCurrentIndex(0)
+        self.tabWidget.setCurrentIndex(1)
 
 
         QMetaObject.connectSlotsByName(MainWindow)
@@ -987,10 +993,11 @@ class Ui_MainWindow(object):
         self.label_windowy.setText(QCoreApplication.translate("MainWindow", u"Window:", None))
         self.label_sidelobey.setText(QCoreApplication.translate("MainWindow", u"Side lobe (dB):", None))
         self.label_adjsidelobey.setText(QCoreApplication.translate("MainWindow", u"Adjacent sidelobes:", None))
-        self.gb_plotconfig.setTitle(QCoreApplication.translate("MainWindow", u"Plot Config", None))
+        self.gb_plotconfig.setTitle(QCoreApplication.translate("MainWindow", u"Beam Config", None))
         self.gb_steering.setTitle(QCoreApplication.translate("MainWindow", u"Steering", None))
         self.label_angleaz.setText(QCoreApplication.translate("MainWindow", u"Azimuth (\u00b0):", None))
         self.label_angleel.setText(QCoreApplication.translate("MainWindow", u"Elevation (\u00b0):", None))
+        self.polarGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Polarization", None))
         self.gb_plot.setTitle(QCoreApplication.translate("MainWindow", u"Plot", None))
         self.rb_azimuth.setText(QCoreApplication.translate("MainWindow", u"Azimuth plane (\u00b0):", None))
         self.rb_elevation.setText(QCoreApplication.translate("MainWindow", u"Elevation plane (\u00b0):", None))

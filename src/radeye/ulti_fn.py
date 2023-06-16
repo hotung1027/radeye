@@ -31,7 +31,7 @@ def apply_map(funcs:list,values:list):
     for fn,value in zip(funcs,values):
         fn(value)
         
-def split_patches(array:np.ndarray,size_x,size_y):
+def split_channels(array:np.ndarray,size_x:int,size_y:int)->np.ndarray:
     return np.array(
         [
             array[i:i+size_x,j:j+size_y]
@@ -39,3 +39,9 @@ def split_patches(array:np.ndarray,size_x,size_y):
             for j in range(0,array.shape[1],size_y)
         ]
     )
+
+def findClosetFromItems(items:list[any],point:any)->int:
+    diff = np.array(items - point).reshape(-1,1)
+    norm = np.linalg.norm(diff,axis = 1)
+    result = np.argmin(norm)
+    return result
