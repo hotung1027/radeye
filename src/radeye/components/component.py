@@ -9,7 +9,8 @@ from radeye.ui import REDLIGHT, YELLOWLIGHT, GREENLIGHT
 import math
 from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
-from radeye.ulti_fn import counterclockwise_phasearray_index,split_patches
+from radeye.ulti_fn import counterclockwise_phasearray_index,split_channels,findClosetFromItems
+from radeye.phasearray.antenna.pattern import convert_phase
 
 
 
@@ -106,7 +107,7 @@ class TcpClient(QObject):
 
     @Slot(str)
     def update_size(self):
-        size = int(self.ui.sizeText.toPlainText())
+        size = int(self.ui.sizeText.text())
         self.socket.write(bytes("ConfigSize:{size}\n".format(size=size),'utf-8'))
 
     @Slot(Data)
@@ -143,13 +144,18 @@ class Attena(Ui_AttenaUi):
         self.gainComboBox.addItems([str(i) for i in GAIN])
         self.offsetComboBox.addItems([str(i) for i in ANGLE])
         self.phaseComboBox.addItems([str(i) for i in ANGLE])   
-        self.gain = self.config['gain']
-        self.phase = self.config['phase']
-        self.offset = self.config['offset']
-        self.mode = self.config['mode']
-        self.gainComboBox.currentTextChanged(lambda text: self.update_gain(float(text)))
-        self.offsetComboBox.currentTextChanged(lambda text: self.update_offset(float(text)))
-        self.phaseComboBox.currentTextChanged(lambda text: self.update_phase(float(text)))
+        zeroIdx = findClosetFromItems(ANGLE,0)
+        self.phaseComboBox.setCurrentIndex(zeroIdx)
+        self.offsetComboBox.setCurrentIndex(zeroIdx)
+
+        self.gainComboBox.currentTextChanged.connect(lambda text: self.update_gain(float(text)))
+        self.offsetComboBox.currentTextChanged.connect(lambda text: self.update_offset(float(text)))
+        self.phaseComboBox.currentTextChanged.connect(lambda text: self.update_phase(float(text)))
+                
+        self.gain = self.config.get('gain',0)
+        self.phase = self.config.get('phase',0)
+        self.offset = self.config.get('offset',0)
+      
         
     
     def update_gain(self, gain:float)->None:
@@ -164,22 +170,6 @@ class Attena(Ui_AttenaUi):
         self.offset = offset
         self.config['offset'] = self.offset
 
-    def convert_phase(phase, offset):            
-        phase = phase - 127
-        offset = offset - 127
-        result = phase + offset
-
-        if(result > 127):
-            result = result - 128
-        elif(result < 0):
-            if(result == -128):
-                result = result + 128
-            elif(result > -128):
-                result = result + 129
-            else:
-                result = result + 256
-
-        return(result)
 
 # 2x2 Channel as single basic unit patch of Antenna
 class Patch(Ui_PatchUi):
@@ -208,19 +198,27 @@ class Patch(Ui_PatchUi):
     def get_attenas(self):
         return self.array
     
-    def findClosetFromItems(self,items:list[any],point:any)->int:
-        return np.argmin(np.linalg.norm(items-point,2,axis=1))
+
     
     
-    def apply(self,phases):
+    def set_phases(self,phases):
+        """_summary_
+
+        Args:
+            phases (NDArray): expected the shape to be 4x4 antenna channel
+        """
         phases = self.parse(phases)
         for key,phase in zip(self.keys,phases):
             if any(key in word  for word in ["ll", "lr"]):
                 antennas = counterclockwise_phasearray_index(self.array[key], 2)
             else:
                 antennas = counterclockwise_phasearray_index(self.array[key], 0)
+
             for antenna,phase in zip(antennas,phase.flatten()):
-                antenna.phaseComboBox.setCurrentIndex(self.findClosetFromItems(ANGLE,phase))
+                
+                phase = convert_phase(phase,0)
+                antenna.update_phase(phase)
+                antenna.phaseComboBox.setCurrentIndex(findClosetFromItems(ANGLE,phase))
 
     # parsing phrase into patch configuration with offset
     def parse(self,phase):
@@ -234,7 +232,7 @@ class Patch(Ui_PatchUi):
         | x x | x x |
         -------------
         """
-        return split_patches(phase,2,2)
+        return split_channels(phase,2,2)
         
 
 
@@ -253,7 +251,7 @@ class MousePressEventFilter(QObject):
             dist = np.sqrt(np.sum(np.power([x,y]-ps * [w,h],2) ,axis=2))
             print(object.objectName(),ps[dist < (w+h)/4].squeeze())
             antenna = object.array
-            closest_point = ps[dist < (w+h)/4].squeeze()
+            closest_point = ps[dist < np.linalg.norm([w,h],2)/4].squeeze()
             for idx,key in zip(object.index,object.keys):
                 if np.any(closest_point) and sum(np.abs(idx - closest_point)) == 0:
                     object.activatedAntenna=antenna[key]
