@@ -2,20 +2,75 @@ from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
 from PySide6.QtCore import QThread,QTimer,Signal
 from logging import info,debug,warning,error
 import hashlib
+from typing import Optional,Union
+import numpy as np
+from components.component import GAIN,OFFSET,ANGLE
+
 
 SerialPortError = QSerialPort.SerialPortError
 
 FILTER_KEYWORDS = "STMicroelectronics"
-DATA_FORMAT = [
-     "spi",
+
+TOPICS = [
+     "led",
+     "polar",
+     "address",
      "channel",
      "phase",
      "gain",
-     "exgain"
-     
+     "exgain"  
 ]
-TERMINATOR = "\r"
+""" ComPort Format
+| SPI communication     | Channel   | Phase     | Atten + Gain      | Ex-Gain |
+-------------------------------------------------------
+| 1-4 -   Address       | 1-4       | 0-127     | 0x80 + 0-127      | 0-127   |
+| 5 - LED Blink         | -         | -         | -                 | -       |
+| 6 - Polarization      | -         | -         | -                 | -       |
+"""
+""" Register Table
+||          ||          ||  (MSB)   ||  Bit 6   ||   Bit 5  ||   Bit 4  ||  Bit 3   ||  Bit 2   ||  Bit 1   ||  (LSB)   ||
+||  Name    ||  Address ||  Bit 7   ||  Bit 6   ||   Bit 5  ||   Bit 4  ||  Bit 3   ||  Bit 2   ||  Bit 1   ||  Bit 0   ||
+------------------------------------------------------------------------------------------------------------------------------
+|| SPI      ||  0x00    ||   --     ||    --    ||    --    ||    --    ||           (1-4)   address[2:0]               ||   
+|| SPI      ||  0x00    ||   --     ||    --    ||    --    ||    --    ||           ( 5 )   LED                        ||   
+|| SPI      ||  0x00    ||   --     ||    --    ||    --    ||    --    ||           ( 6 )   Polarization               ||   
+|| Channel  ||  0x01    ||   --     ||    --    ||    --    ||    --    ||           (1-4)   channel[2:0]               ||
+|| Channel  ||  0x01    ||   --     ||    --    ||    --    ||    --    ||      0 for clockwise         if SPI == 6     ||    
+|| Channel  ||  0x01    ||   --     ||    --    ||    --    ||    --    ||      1 for anti-clockwise    if SPI == 6     ||    
+|| Phase    ||  0x02    ||   --     ||                          phase angle (0 - 127)                                   ||
+|| Gain     ||  0x03    ||   atten  ||                          gain        (0 - 127)                                   ||
+|| ExGain   ||  0x04    ||   --     ||                          ex-gain     (0 - 127)                                   ||
+"""
+""" DATA Format
+| FORMAT NAME   | Byte Address  |   Bit Address     | Byte Size     |   INPUT RANGE     | OUTPUT RANGE  |
+---------------------------------------------------------------------------------------------------------
+|   LED         |  0x00         |   0b00000101      | 1 (bit)       |       0-1         |       0-1     |
+|   Polar       |  0x00         |   0b00000110      | 1 (bit)       |       0-1         |       0-1     |
+|   Address     |  0x00         |   0b00000001      | 3 (bit)       |       0-4         |       1-4     |
+|   Channel     |  0x01         |   0b00000001      | 3 (bit)       |       0-4         |       1-4     |
+|   Phase       |  0x02         |   0b00000001      | 7 (bit)       |       0-360       |       0-127   |
+|   Atten       |  0x03         |   0b10000000      | 1 (bit)       |       0-1         |       0-1     |
+|   Gain        |  0x03         |   0b00000001      | 7 (bit)       |       0-127       |       0-127   |
+|   ExGain      |  0x04         |   0b00000001      | 7 (bit)       |       0-127       |       0-127   |
+"""
+REGISTER_MAP = [
+("led"    , 0x00, 0b00000101, 1, (0, 1)  , (0, 1))
+("polar"  , 0x00, 0b00000110, 1, (0, 1)  , (0, 1))
+("address", 0x00, 0b00000001, 3, (0, 1)  , (0, 1))
+("channel", 0x01, 0b00000001, 3, (1, 4)  , (1, 4))
+("phase"  , 0x02, 0b00000001, 7, (0, 360), (0, 127))
+("atten"  , 0x03, 0b10000000, 1, (0, 1)  , (0, 1))
+("gain"   , 0x03, 0b00000001, 7, (0, 127), (0, 127))
+("exgain" , 0x04, 0b00000001, 7, (0, 127), (0, 127))
+]
 
+DATA_FORMAT = [
+    "name",'byte_address',"bit_address","byte_size","input_range","output_range"
+]
+
+TERMINATOR = b'\r'
+       
+            
 
 """ Serialize a packet into a formatted bytestring
 Args:
@@ -24,8 +79,43 @@ Returns:
     object: that taken the dictionary of data will format into a serialized bytestring
 """
 class Serializer(object):
-    def __init__(self,format) -> None:
-       self.format = format 
+    def __init__(self,register_map) -> None:
+       self.register_map = register_map
+       
+    def combine(self,channel_data:dict) -> bytearray:
+        byte_array = []
+        num_bytes = 0
+        for channel_format in self.register_map:
+            name,byte_address,bit_address,byte_size,input_range,output_range = channel_format
+            data = channel_data.get(name,0)
+            byte_data = self.to_bytes(data,channel_format)
+            byte_array.append(byte_data)
+            num_bytes = max(num_bytes,byte_address)
+        return  int.to_bytes(sum(byte_array),num_bytes)
+
+            
+    def to_bytes(self,data,register_map):
+        name,byte_address,bit_address,byte_size,input_range,output_range = register_map
+        # verify bit_size match output_range
+        assert np.log2(output_range[1] - output_range[0] + 1) <= byte_size , "output range should be within bit size"
+
+        data =  self.remap(data,
+                           input_range[0],input_range[1],
+                           output_range[0],output_range[1]) * bit_address * (1<<(8*byte_address))
+        return int(data)
+        
+        
+    def remap(self,data,input_min,input_max,output_min,output_max):
+        assert input_max - input_min != 0   , "input range should not be zero"
+        
+        result = data * (output_max - output_min) / (input_max - input_min) + output_min
+        return result
+        
+        
+    def format(self,data) -> bytearray:
+        byte_data = self.combine(data)
+        return b''.join([byte_data,TERMINATOR])
+
 
     def encode(self, data:dict)-> bytearray:
         result = None
@@ -34,27 +124,35 @@ class Serializer(object):
             return 
         
         try:
-            result =  b''.join([
-            int.to_bytes(data.get(key),1,"big") 
-            for key in self.format 
-                if key in data.keys()])
+            result =  self.format(data)
         except OverflowError as e:
             error(e)
         finally:
             return result
         
+        
 class Deserializer(object):
-    def __init__(self,format) -> None:
-       self.format = format 
+    def __init__(self,register_map) -> None:
+       self.register_map = register_map 
+       
+    
+    def from_bytes(self,byte_data,register_map):
+        bytes_array = sum([int.from_bytes(byte)*(1<<8*idx) for idx,byte in enumerate(byte_data)])
+        data_dict = {}
+        for (name,byte_address,bit_address,byte_size,_,_) in register_map:
+            data = bytes_array & (bit_address * (1<<8*byte_address)) 
+            
+        data_dict.update({name: data 
+                          if byte_size > 1 
+                            else 
+                            data == bit_address
+                        })
+        return data_dict
 
-
+    
     # decode bytestring into a dictionary
     def decode(self, data:bytearray)-> dict:
-        return dict(
-            zip(
-                self.format,
-                [int(byte) for byte in data]
-                ))
+        return  self.from_bytes(data,self.register_map)
         
 
     """Subscriber interface
@@ -76,9 +174,14 @@ class Subscriber(object):
         self.timer = QTimer()
         self.hash_history = [""] # list of hash object
         self.hash = hash_algo
-        pass
+        self.timer.setInterval(update_interval)
+        self.timer.timeout.connect(self.pool)
 
     def get(self,topic):
+        """ Get data from serial port """
+        
+
+        
         pass
     
 
@@ -98,25 +201,45 @@ class Subscriber(object):
 
 
 class QSerialPortManger(object):
-    def __init__(self) -> None:
-        self.worker = QThread()
-        self.serialpool =  []
-        self.topics = []
-        self.update_interval = 100 #ms
-        self.subscriber = Subscriber(self.topics,self.update_interval)
+    """  QSerialPortManger.
 
-        pass
+    Args:
+        sub_topics      : topics subscribed to update by each interval
+        register_map    : byte address data format
+        update_interval : interval for subscriber to pooling data (in ms)
+    """
+    def __init__(self,sub_topics,register_map,update_interval = 100) -> None:
+        self.worker = QThread()
+        
+        """TODO: add serial port pool"""
+        self.serialpool =  []
+        self.topics = sub_topics
+        self.register_map = register_map
+        
+        self.update_interval = update_interval #ms
+        self.subscriber = Subscriber(self.topics,self.update_interval)
+        self.serializer = Serializer(self.register_map)
+        self.deserializer = Deserializer(self.register_map)
+        self.subscriber.dataUpdated.connect(self.read)
+
 
     def connect(self, port):
         self.serialpool.append(port)
         self.serialpool[-1].moveToThread(self.worker)
         self.serialpoll[-1].readRead.connect(self.read)
-        pass
 
-    def read(self,data):
+    
+    def bind(self,port,name):
         pass
+    
+    # read bytes data from serial port and decode into dictionary
+    def read(self,data:bytearray) -> dict:
+        
+        return self.deserializer.decode(data)
 
     def write(self,data):
+        byte_data = self.serializer.encode(data)
+        send_data(byte_data)
         pass
 
 
@@ -178,7 +301,7 @@ def filter_ports_by_manufacturer(ports_found,keywords):
     """_summary_
     | SPI communication     | Channel   | Phase     | Atten + Gain      | Ex-Gain |
     -------------------------------------------------------
-    | 1-4 -   Address       | 1-4       | 0-127     | 0x80 + 0-127      | 0-255   |
+    | 1-4 -   Address       | 1-4       | 0-127     | 0x80 + 0-127      | 0-127   |
     | 5 - LED Blink         | -         | -         | -                 | -       |
     | 6 - Polarization      | -         | -         | -                 | -       |
     """
