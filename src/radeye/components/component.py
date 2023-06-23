@@ -35,7 +35,10 @@ class Data(QObject):
         self.y_data = self.y_data + y
     
     def confirm(self):
-        y_data = bytes(self.y_data).decode('utf-8').split(':')[0:-1]
+        y_data = bytes(self.y_data)                     \
+                                    .decode('utf-8')    \
+                                    .rstrip()           \
+                                    .split(':')[0:-1]
         y_data = np.array(y_data,dtype=np.int16)
         y_data = vectorize(y_data, s16i11)
         self.y_data = y_data

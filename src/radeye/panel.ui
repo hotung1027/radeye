@@ -443,7 +443,7 @@
                    </spacer>
                   </item>
                   <item>
-                   <widget class="QLineEdit" name="lineEdit"/>
+                   <widget class="QLineEdit" name="bandWidthText"/>
                   </item>
                  </layout>
                 </item>
@@ -470,7 +470,7 @@
                    </spacer>
                   </item>
                   <item>
-                   <widget class="QLineEdit" name="lineEdit_2"/>
+                   <widget class="QLineEdit" name="pulseWidthText"/>
                   </item>
                  </layout>
                 </item>
@@ -494,12 +494,12 @@
            </widget>
           </item>
           <item>
-           <layout class="QVBoxLayout" name="verticalLayout" stretch="1,1">
-            <item>
-             <widget class="PlotWidget" name="dataView"/>
-            </item>
+           <layout class="QVBoxLayout" name="verticalLayout" stretch="0,0">
             <item>
              <widget class="PlotWidget" name="processView"/>
+            </item>
+            <item>
+             <widget class="PlotWidget" name="dataView"/>
             </item>
            </layout>
           </item>
@@ -1711,7 +1711,7 @@
      <x>0</x>
      <y>0</y>
      <width>1087</width>
-     <height>22</height>
+     <height>19</height>
     </rect>
    </property>
   </widget>

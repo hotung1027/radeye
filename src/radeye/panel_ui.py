@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'panel.ui'
+## Form generated from reading UI file 'paneliNuLLL.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.0
 ##
@@ -274,10 +274,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_2.addItem(self.horizontalSpacer_24)
 
-        self.lineEdit = QLineEdit(self.groupBox_3)
-        self.lineEdit.setObjectName(u"lineEdit")
+        self.bandWidthText = QLineEdit(self.groupBox_3)
+        self.bandWidthText.setObjectName(u"bandWidthText")
 
-        self.horizontalLayout_2.addWidget(self.lineEdit)
+        self.horizontalLayout_2.addWidget(self.bandWidthText)
 
 
         self.verticalLayout_6.addLayout(self.horizontalLayout_2)
@@ -293,10 +293,10 @@ class Ui_MainWindow(object):
 
         self.horizontalLayout_30.addItem(self.horizontalSpacer_25)
 
-        self.lineEdit_2 = QLineEdit(self.groupBox_3)
-        self.lineEdit_2.setObjectName(u"lineEdit_2")
+        self.pulseWidthText = QLineEdit(self.groupBox_3)
+        self.pulseWidthText.setObjectName(u"pulseWidthText")
 
-        self.horizontalLayout_30.addWidget(self.lineEdit_2)
+        self.horizontalLayout_30.addWidget(self.pulseWidthText)
 
 
         self.verticalLayout_6.addLayout(self.horizontalLayout_30)
@@ -313,18 +313,16 @@ class Ui_MainWindow(object):
 
         self.verticalLayout = QVBoxLayout()
         self.verticalLayout.setObjectName(u"verticalLayout")
-        self.dataView = PlotWidget(self.RxPanel)
-        self.dataView.setObjectName(u"dataView")
-
-        self.verticalLayout.addWidget(self.dataView)
-
         self.processView = PlotWidget(self.RxPanel)
         self.processView.setObjectName(u"processView")
 
         self.verticalLayout.addWidget(self.processView)
 
-        self.verticalLayout.setStretch(0, 1)
-        self.verticalLayout.setStretch(1, 1)
+        self.dataView = PlotWidget(self.RxPanel)
+        self.dataView.setObjectName(u"dataView")
+
+        self.verticalLayout.addWidget(self.dataView)
+
 
         self.horizontalLayout_4.addLayout(self.verticalLayout)
 
@@ -1027,7 +1025,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1087, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1087, 19))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")

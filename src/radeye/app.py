@@ -47,6 +47,7 @@ from fxpmath import Fxp
 import pandas as pd
 
 import numpy as np
+from scipy.constants import speed_of_light
 
 
 from radeye.ui import REDLIGHT, YELLOWLIGHT, GREENLIGHT
@@ -90,14 +91,14 @@ class radeye(QMainWindow):
         self.ui.findComPortButton.clicked.connect(self.update_comport_list)
         self.ui.comPortSelect.activated.connect(self.bind_comport_to_patch)
         self.patch_bind_address={}
-        self.ui.led.clicked.connect(self.lightup_patch(self.activatedPatch))
+        self.ui.led.clicked.connect(lambda : self.lightup_patch(self.activatedPatch))
         
         
         """Data Acquisition panel"""
 
         self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
         self.client = TcpClient(self.ui)
-        self.client.socket.readyRead.connect(self.client.get_waveform(waveform))
+        self.client.socket.readyRead.connect(lambda : self.client.get_waveform(waveform))
         self.ui.addressText.editingFinished.connect(
             lambda: self.client.update_hostname(self.ui.addressText.text())
         )
@@ -893,17 +894,37 @@ class radeye(QMainWindow):
 def plot_waveform(x, y):
     global window, waveform
 
-    df = pd.DataFrame(dict(x=x, y=y))
-    fig = px.line(df, x="sample", y="normalized Amplitude")
-    window.ui.dataView.plotItem.plot(x, y, clear=True)
-    y_fft = np.fft.rfft(y)
-    fs = int(window.ui.sampleRateText.toPlainText())
-    L = len(y_fft)
-    f = fs * np.arange(0, L) / L / 2
-    p2 = np.abs(y_fft / L)
+    # df = pd.DataFrame(dict(x=x, y=y))
+    # fig = px.line(df, x="sample", y="normalized Amplitude")
+    try:
 
-    window.ui.processView.plotItem.plot(f, p2, clear=True)
-    waveform.flush()
+        window.ui.dataView.plotItem.plot(x, y, clear=True)
+        y_fft = np.fft.rfft(y)
+        unit = {
+            "G": 1e9,
+            "M": 1e6,
+            "k": 1e3,
+            "u": 1e-6,
+            "n": 1e-9,
+        }
+        convertUnit = lambda text: int(text[0:-1]) * unit.get(text[-1], 1)
+
+        fs = convertUnit(window.ui.sampleRateText.text()) 
+
+        bandwidth = convertUnit(window.ui.bandWidthText.text())
+        pulsewidth = convertUnit(window.ui.pulseWidthText.text())
+
+
+        L = len(y_fft)
+        f = fs * np.arange(0, L) / L / 2
+        p2 = np.abs(y_fft / L)
+        range = speed_of_light * pulsewidth / (2 * bandwidth) * f
+        db = 10 * np.log10(p2)
+        window.ui.processView.plotItem.plot(range, db, clear=True)
+        window.ui.processView.plotItem.setLabel("left", "Amplitude (dB)")
+        window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
+    finally:
+        waveform.flush()
 
 
 
