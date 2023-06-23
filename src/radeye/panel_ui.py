@@ -30,7 +30,7 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(1003, 696)
+        MainWindow.resize(1087, 640)
         sizePolicy = QSizePolicy(QSizePolicy.MinimumExpanding, QSizePolicy.Preferred)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -262,6 +262,44 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_6.addLayout(self.horizontalLayout_12)
+
+        self.horizontalLayout_2 = QHBoxLayout()
+        self.horizontalLayout_2.setObjectName(u"horizontalLayout_2")
+        self.label = QLabel(self.groupBox_3)
+        self.label.setObjectName(u"label")
+
+        self.horizontalLayout_2.addWidget(self.label)
+
+        self.horizontalSpacer_24 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_2.addItem(self.horizontalSpacer_24)
+
+        self.lineEdit = QLineEdit(self.groupBox_3)
+        self.lineEdit.setObjectName(u"lineEdit")
+
+        self.horizontalLayout_2.addWidget(self.lineEdit)
+
+
+        self.verticalLayout_6.addLayout(self.horizontalLayout_2)
+
+        self.horizontalLayout_30 = QHBoxLayout()
+        self.horizontalLayout_30.setObjectName(u"horizontalLayout_30")
+        self.label_2 = QLabel(self.groupBox_3)
+        self.label_2.setObjectName(u"label_2")
+
+        self.horizontalLayout_30.addWidget(self.label_2)
+
+        self.horizontalSpacer_25 = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+
+        self.horizontalLayout_30.addItem(self.horizontalSpacer_25)
+
+        self.lineEdit_2 = QLineEdit(self.groupBox_3)
+        self.lineEdit_2.setObjectName(u"lineEdit_2")
+
+        self.horizontalLayout_30.addWidget(self.lineEdit_2)
+
+
+        self.verticalLayout_6.addLayout(self.horizontalLayout_30)
 
 
         self.verticalLayout_7.addWidget(self.groupBox_3)
@@ -939,8 +977,38 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
         self.channelGroupBox = QGroupBox(self.BeamformingConfig)
         self.channelGroupBox.setObjectName(u"channelGroupBox")
-        self.channelGrid = QGridLayout(self.channelGroupBox)
+        self.channelConfGrid = QGridLayout(self.channelGroupBox)
+        self.channelConfGrid.setObjectName(u"channelConfGrid")
+        self.groupBox_5 = QGroupBox(self.channelGroupBox)
+        self.groupBox_5.setObjectName(u"groupBox_5")
+        self.verticalLayout_9 = QVBoxLayout(self.groupBox_5)
+        self.verticalLayout_9.setObjectName(u"verticalLayout_9")
+        self.comPortSelect = QComboBox(self.groupBox_5)
+        self.comPortSelect.setObjectName(u"comPortSelect")
+
+        self.verticalLayout_9.addWidget(self.comPortSelect)
+
+        self.findComPortButton = QPushButton(self.groupBox_5)
+        self.findComPortButton.setObjectName(u"findComPortButton")
+
+        self.verticalLayout_9.addWidget(self.findComPortButton)
+
+        self.led = QPushButton(self.groupBox_5)
+        self.led.setObjectName(u"led")
+
+        self.verticalLayout_9.addWidget(self.led)
+
+
+        self.channelConfGrid.addWidget(self.groupBox_5, 0, 0, 1, 1)
+
+        self.groupBox_6 = QGroupBox(self.channelGroupBox)
+        self.groupBox_6.setObjectName(u"groupBox_6")
+        self.channelGrid = QGridLayout(self.groupBox_6)
         self.channelGrid.setObjectName(u"channelGrid")
+
+        self.channelConfGrid.addWidget(self.groupBox_6, 1, 0, 1, 1)
+
+        self.channelConfGrid.setRowStretch(1, 1)
 
         self.horizontalLayout_3.addWidget(self.channelGroupBox)
 
@@ -959,7 +1027,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1003, 22))
+        self.menubar.setGeometry(QRect(0, 0, 1087, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -988,6 +1056,8 @@ class Ui_MainWindow(object):
         self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Data Accuqsistion Config", None))
         self.sizeLabel.setText(QCoreApplication.translate("MainWindow", u"Size:", None))
         self.sampleRateLabel.setText(QCoreApplication.translate("MainWindow", u"SampleRate:", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"BandWidth:", None))
+        self.label_2.setText(QCoreApplication.translate("MainWindow", u"PulseWidth:", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.RxPanel), QCoreApplication.translate("MainWindow", u"Display", None))
         self.gb_arrayconfig.setTitle(QCoreApplication.translate("MainWindow", u"Array Config", None))
         self.gb_horizontal.setTitle(QCoreApplication.translate("MainWindow", u"Horizontal - x", None))
@@ -1014,6 +1084,10 @@ class Ui_MainWindow(object):
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"Visualize", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.PhaseArray), QCoreApplication.translate("MainWindow", u"PhaseArray", None))
         self.channelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Channel Config", None))
+        self.groupBox_5.setTitle(QCoreApplication.translate("MainWindow", u"Comm Port", None))
+        self.findComPortButton.setText(QCoreApplication.translate("MainWindow", u"find port", None))
+        self.led.setText(QCoreApplication.translate("MainWindow", u"led", None))
+        self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"ChannelPanel", None))
         self.panelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"PhaseArrayPanel", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.BeamformingConfig), QCoreApplication.translate("MainWindow", u"BeamformingConfig", None))
     # retranslateUi

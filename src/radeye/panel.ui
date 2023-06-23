@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1003</width>
-    <height>696</height>
+    <width>1087</width>
+    <height>640</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -417,6 +417,60 @@
                   </item>
                   <item>
                    <widget class="QLineEdit" name="sampleRateText"/>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_2">
+                  <item>
+                   <widget class="QLabel" name="label">
+                    <property name="text">
+                     <string>BandWidth:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_24">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="lineEdit"/>
+                  </item>
+                 </layout>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_30">
+                  <item>
+                   <widget class="QLabel" name="label_2">
+                    <property name="text">
+                     <string>PulseWidth:</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <spacer name="horizontalSpacer_25">
+                    <property name="orientation">
+                     <enum>Qt::Horizontal</enum>
+                    </property>
+                    <property name="sizeHint" stdset="0">
+                     <size>
+                      <width>40</width>
+                      <height>20</height>
+                     </size>
+                    </property>
+                   </spacer>
+                  </item>
+                  <item>
+                   <widget class="QLineEdit" name="lineEdit_2"/>
                   </item>
                  </layout>
                 </item>
@@ -1599,7 +1653,42 @@
           <property name="title">
            <string>Channel Config</string>
           </property>
-          <layout class="QGridLayout" name="channelGrid"/>
+          <layout class="QGridLayout" name="channelConfGrid" rowstretch="0,1">
+           <item row="0" column="0">
+            <widget class="QGroupBox" name="groupBox_5">
+             <property name="title">
+              <string>Comm Port</string>
+             </property>
+             <layout class="QVBoxLayout" name="verticalLayout_9">
+              <item>
+               <widget class="QComboBox" name="comPortSelect"/>
+              </item>
+              <item>
+               <widget class="QPushButton" name="findComPortButton">
+                <property name="text">
+                 <string>find port</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QPushButton" name="led">
+                <property name="text">
+                 <string>led</string>
+                </property>
+               </widget>
+              </item>
+             </layout>
+            </widget>
+           </item>
+           <item row="1" column="0">
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>ChannelPanel</string>
+             </property>
+             <layout class="QGridLayout" name="channelGrid"/>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
         <item>
@@ -1621,7 +1710,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1003</width>
+     <width>1087</width>
      <height>22</height>
     </rect>
    </property>
