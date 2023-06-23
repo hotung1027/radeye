@@ -1,10 +1,11 @@
 from PySide6.QtSerialPort import QSerialPort, QSerialPortInfo
-from PySide6.QtCore import QThread,QTimer,Signal
+from PySide6.QtCore import QThread,QTimer,Signal,Slot,QObject
+from PySide6.QtWidgets import QWidget
 from logging import info,debug,warning,error
 import hashlib
 from typing import Optional,Union
 import numpy as np
-from components.component import GAIN,OFFSET,ANGLE
+from radeye.components.component import GAIN,OFFSET,ANGLE
 
 
 SerialPortError = QSerialPort.SerialPortError
@@ -54,15 +55,19 @@ TOPICS = [
 |   ExGain      |  0x04         |   0b00000001      | 7 (bit)       |       0-127       |       0-127   |
 """
 REGISTER_MAP = [
-("led"    , 0x00, 0b00000101, 1, (0, 1)  , (0, 1))
-("polar"  , 0x00, 0b00000110, 1, (0, 1)  , (0, 1))
-("address", 0x00, 0b00000001, 3, (0, 1)  , (0, 1))
-("channel", 0x01, 0b00000001, 3, (1, 4)  , (1, 4))
-("phase"  , 0x02, 0b00000001, 7, (0, 360), (0, 127))
-("atten"  , 0x03, 0b10000000, 1, (0, 1)  , (0, 1))
-("gain"   , 0x03, 0b00000001, 7, (0, 127), (0, 127))
+("led"    , 0x00, 0b00000101, 1, (0, 1)  , (0, 1)),
+("polar"  , 0x00, 0b00000110, 1, (0, 1)  , (0, 1)),
+("address", 0x00, 0b00000001, 3, (0, 1)  , (0, 1)),
+("channel", 0x01, 0b00000001, 3, (1, 4)  , (1, 4)),
+("phase"  , 0x02, 0b00000001, 7, (0, 360), (0, 127)),
+("atten"  , 0x03, 0b10000000, 1, (0, 1)  , (0, 1)),
+("gain"   , 0x03, 0b00000001, 7, (0, 127), (0, 127)),
 ("exgain" , 0x04, 0b00000001, 7, (0, 127), (0, 127))
 ]
+POLARIZATION = {
+    "clockwise" : 0,
+    "anti-clockwise" : 1
+}
 
 DATA_FORMAT = [
     "name",'byte_address',"bit_address","byte_size","input_range","output_range"
@@ -91,6 +96,7 @@ class Serializer(object):
             byte_data = self.to_bytes(data,channel_format)
             byte_array.append(byte_data)
             num_bytes = max(num_bytes,byte_address)
+            
         return  int.to_bytes(sum(byte_array),num_bytes)
 
             
@@ -142,11 +148,11 @@ class Deserializer(object):
         for (name,byte_address,bit_address,byte_size,_,_) in register_map:
             data = bytes_array & (bit_address * (1<<8*byte_address)) 
             
-        data_dict.update({name: data 
-                          if byte_size > 1 
-                            else 
-                            data == bit_address
-                        })
+            data_dict.update({name: data 
+                            if byte_size > 1 
+                                else 
+                                data == bit_address
+                            })
         return data_dict
 
     
@@ -155,59 +161,83 @@ class Deserializer(object):
         return  self.from_bytes(data,self.register_map)
         
 
-    """Subscriber interface
-    Args:
-        topics: topics subscribed to update by each interval
-        update interval: interval to pooling data in ms
-    Returns:
-        _type_: _description_
-    """
-class Subscriber(object):
-    dataUpdated = Signal(bytes)
-    def __init__(self,
-                 topics = ["phase","gain"],
+"""Subscriber interface
+Args:
+    topics: topics subscribed to update by each interval
+    update interval: interval to pooling data in ms
+Returns:
+    _type_: _description_
+"""
+class Subscriber(QObject):
+    dataUpdated = Signal(QSerialPort,bytes)
+    def __init__(self,  
                  update_interval = 100, #ms
                  hash_algo = hashlib.sha3_256
                  ) -> None:
-        self.topics = []
-        self.subscriber = None
+        super().__init__()
+        self.port_pool = []
+
+        self.hash_history = dict() # list of hash object
+        self.hash = lambda x:hash_algo(x).hexdigest()
+        
         self.timer = QTimer()
-        self.hash_history = [""] # list of hash object
-        self.hash = hash_algo
         self.timer.setInterval(update_interval)
-        self.timer.timeout.connect(self.pool)
-
-    def get(self,topic):
-        """ Get data from serial port """
+        self.timer.timeout.connect(self.listen)
         
 
-        
-        pass
+
+    def listen(self):
+        for port in self.port_pool:
+            self.pool(port)
+
+    def bind_port(self,port):
+        self.port_pool.append(port)
     
+    def update_port(self,ports):
+        self.port_pool = ports
 
-    def pool(self) -> None:
+    def get(self,port):
+        """ Get data from serial port """
+        byte_data = read_data(port)
+        return byte_data
+    
+    @Slot()
+    def pool(self,port) -> None:
         updated = False
         """ data has to be encoded to bytes 
         """
-        for index , (topic, history) in enumerate(zip(self.topics,self.hash_history)):
-            data = self.get(topic)
-            if not hash(data).hexdigest() == history.hexdigest():
-            # get data
-                updated = True
-                self.hash_history[index] = hash(topic)
-
+        data = self.get(port)
+        hash = self.hash
+        port_hash = hash(bytes(port.portname,encoding='utf-8'))
+        data_hash = hash(data)
+        hash_history = self.hash_history
+            
+        """
+        Logic Table:
+        port_hash in hash_history | data_hash == hash_history | explain
+        True                      | True                    | data is not updated
+        False                     | True                    | impossible
+        True                      | False                   | data is updated
+        False                     | False                   | data is updated
+        """
+        if port_hash in hash_history.keys() and data_hash == hash_history.get(port_hash):
+            return
+        else:
+            updated = True      
+       
         if updated:
-            self.dataUpdated.emit(data)
+            self.hash_history.update({port_hash:data_hash}) 
+            self.dataUpdated.emit(port,data)
 
 
 class QSerialPortManger(object):
     """  QSerialPortManger.
-
     Args:
         sub_topics      : topics subscribed to update by each interval
         register_map    : byte address data format
         update_interval : interval for subscriber to pooling data (in ms)
     """
+    readReady = Signal(QSerialPort,dict)
     def __init__(self,sub_topics,register_map,update_interval = 100) -> None:
         self.worker = QThread()
         
@@ -215,56 +245,60 @@ class QSerialPortManger(object):
         self.serialpool =  []
         self.topics = sub_topics
         self.register_map = register_map
-        
+
         self.update_interval = update_interval #ms
-        self.subscriber = Subscriber(self.topics,self.update_interval)
+        self.port_table = {}
         self.serializer = Serializer(self.register_map)
         self.deserializer = Deserializer(self.register_map)
+        
+        self.subscriber = Subscriber(self.update_interval)
+        self.subscriber.moveToThread(self.worker)
         self.subscriber.dataUpdated.connect(self.read)
-
+        
+        self.worker.start()
+        
+    def __del__(self):
+        self.worker.quit()
+        self.worker.wait()
 
     def connect(self, port):
         self.serialpool.append(port)
         self.serialpool[-1].moveToThread(self.worker)
         self.serialpoll[-1].readRead.connect(self.read)
+        self.subscriber.bind_port(self.serialpool[-1])
 
-    
-    def bind(self,port,name):
-        pass
+    """Bind serial port to patch for us to lookup which patch to update or sending data"""
+    def bind(self,port:QSerialPort,patch:object):
+        # use port as key to lookup patch, as port are persistent
+        self.port_table.update({port:patch})
     
     # read bytes data from serial port and decode into dictionary
-    def read(self,data:bytearray) -> dict:
-        
-        return self.deserializer.decode(data)
+    def read(self,port,byte_data:bytearray) -> dict:
+        data =  self.deserializer.decode(byte_data)
+        self.readReady.emit(port,data)
+        return data
 
-    def write(self,data):
+    def write(self,port,data:dict)->None:
         byte_data = self.serializer.encode(data)
-        send_data(byte_data)
-        pass
+        send_data(port,byte_data)
 
 
-
-
-
-
-
-def init_serial():
-    """ 
-    Bind all matching available ports to the serial object
-    """
-    # We are using STM32 MCU, so we filter out all ports that are not matching 
-    available_ports = filter_ports_by_manufacturer(get_all_ports(), FILTER_KEYWORDS)
-    if len(available_ports) == 0:
-        warning("No available ports found")
-        return
-    ports = []    
-    for portInfo in available_ports:
-        try:
-            
-            ports.append(connect_port(portInfo)) 
-        except:
-            pass
-    return ports
+    def init_serial(self):
+        """ 
+        Bind all matching available ports to the serial object
+        """
+        # We are using STM32 MCU, so we filter out all ports that are not matching 
+        available_ports = filter_ports_by_manufacturer(get_all_ports(), FILTER_KEYWORDS)
+        if len(available_ports) == 0:
+            warning("No available ports found")
+            return
+        ports = []    
+        for portInfo in available_ports:
+            try:
+                ports.append(connect_port(portInfo)) 
+            except:
+                pass
+        return ports
 
 
 def connect_port(portInfo):
@@ -275,7 +309,7 @@ def connect_port(portInfo):
             serialport.setPort(portInfo)
         except:
             error("Error: Could not connect to port")
-             # Not implemented yet
+            # Not implemented yet
         finally:
             return serialport
 
@@ -318,7 +352,7 @@ def send_data(serialport,data):
 def read_data(serialport):
     if not serialport.error() in SerialPortError: 
         try:
-            return serialport.readAll()
+            return serialport.readLine()
         except:
             warning("Error: Could not read from port")
         finally:
