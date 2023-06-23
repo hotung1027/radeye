@@ -173,7 +173,8 @@ class Attena(Ui_AttenaUi):
 
 # 2x2 Channel as single basic unit patch of Antenna
 class Patch(Ui_PatchUi):
-    changedActivatedAntenna = Signal(list)
+    changedActivatedElement = Signal(list)
+    clicked = Signal(object)
     def __init__(self, parent: QObject | None = ...) -> None:
         super(Patch,self).__init__()
         xv,yv = np.meshgrid([1,3],[1,3])
@@ -184,6 +185,7 @@ class Patch(Ui_PatchUi):
 
         self.mouseEventFilter = MousePressEventFilter()
         self.installEventFilter(self.mouseEventFilter)
+        # initialize antenna
         for key in self.keys:
             self.array[key]= [Attena() for i in range(4)]
             for i in range(4):
@@ -254,9 +256,9 @@ class MousePressEventFilter(QObject):
             closest_point = ps[dist < np.linalg.norm([w,h],2)/4].squeeze()
             for idx,key in zip(object.index,object.keys):
                 if np.any(closest_point) and sum(np.abs(idx - closest_point)) == 0:
-                    object.activatedAntenna=antenna[key]
-                    object.changedActivatedAntenna.emit(antenna[key])
-
+                    object.activatedAntenna=antenna[key] # assign activated element
+                    object.changedActivatedElement.emit(antenna[key]) # emit wich element is clicked
+                    object.clicked.emit(object) # emit which patch is clicked
             
 
         return super(MousePressEventFilter, self).eventFilter(object, event)
