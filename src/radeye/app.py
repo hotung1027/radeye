@@ -56,6 +56,7 @@ from radeye.patch_ui import Ui_PatchUi
 from radeye.panel_ui import Ui_MainWindow
 from radeye.components.component import TcpClient, Data, SocketState, Patch, Attena
 from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map , split_channels
+from radeye.ComPort import QSerialPortManger,REGISTER_MAP, POLARIZATION
 import radeye.attena_rc
 # from qt_material import apply_stylesheet
 
@@ -79,9 +80,19 @@ class radeye(QMainWindow):
         self.window_list = ["Square", "Chebyshev", "Taylor", "Hamming", "Hann","Blackman"]
         self.plot_list = ["3D (Az-El-Amp)", "2D Cartesian", "2D Polar", "Array layout"]
         self.array_config = dict()
+        self.activatedPatch = None
         # self.array_config = dict(zip(param_keys, np.zeros(len(param_keys))))
         self.fix_azimuth = False
-
+        
+        """Serial port panel"""
+        self.serial_manager = QSerialPortManger(["phase","gain"],REGISTER_MAP)
+        self.comports = {}
+        self.ui.findComPortButton.clicked.connect(self.update_comport_list)
+        self.ui.comPortSelect.activated.connect(self.bind_comport_to_patch)
+        self.patch_bind_address={}
+        self.ui.led.clicked.connect(self.lightup_patch(self.activatedPatch))
+        
+        
         """Data Acquisition panel"""
 
         self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
@@ -98,6 +109,10 @@ class radeye(QMainWindow):
         self.ui.stopButton.toggled.connect(self.STOP)
         self.ui.runButton.clicked.connect(self.RUN)
         self.ui.sizeText.editingFinished.connect(self.client.update_size)
+        
+        self.timer = QTimer()
+        self.timer.timeout.connect(self.RUN)
+        self.timer.start(100)
 
         """
          TODO: add function to update the size of the patch
@@ -274,9 +289,7 @@ class radeye(QMainWindow):
 
         self.ui.gridLayout.update()
 
-        self.timer = QTimer()
-        self.timer.timeout.connect(self.RUN)
-        self.timer.start(100)
+
         self.show()
 
 
@@ -758,10 +771,11 @@ class radeye(QMainWindow):
             self.ui.channelGrid.removeWidget(self.antennas[i])
             self.antennas[i].hide()
 
-    def change_patch_layout(
-        self,
+    def assign_patch(
+        self,obj: object
     ) -> None:
-        pass
+        self.activatedPatch = obj 
+        # 
 
     def add_patch(self, numberOfPatch: int) -> None:
         size_x = self.array_config['size_x']
@@ -776,8 +790,11 @@ class radeye(QMainWindow):
                     "}\n"
                     ""
                 )
-            self.patches[i].changedActivatedAntenna.connect(self.update_antenna)
+            self.patches[i].changedActivatedElement.connect(self.update_antenna)
+            # TODO : clicked patch
+            self.patches[i].clicked.connect(self.assign_patch)
             # TODO: reassign ComPorts
+            
             self.ui.panelGrid.addWidget(
                 self.patches[i],
                 int(i / int(size_x/4)),
@@ -790,6 +807,7 @@ class radeye(QMainWindow):
             self.ui.panelGrid.removeWidget(self.patches[i])
             self.patches[i].hide()
             # TODO: disconnect ComPorts 
+            # self.patch_bind_address.update({self.patches[i]:None})s
 
 
     def update_patch(self) -> None:
@@ -801,15 +819,57 @@ class radeye(QMainWindow):
         # get the number of rows and columns
         self.remove_patch(len(self.patches))
         self.add_patch(numAntennas)
+        
+        
+    """ComPort Panel Configuration"""
+    def update_comport_list(self) -> None:
+        self.ui.comPortSelect.clear()
+        found_comports = self.serial_manager.init_serial()
+        if not found_comports:
+            debug("No comport found")
+            return
+        self.comports = dict([(port.portName(),port) 
+              for port in found_comports])
+        self.ui.comPortSelect.addItems(list(self.comports.keys()))
+        
+    
+    def bind_comport_to_patch(self,index) -> None:
+        port_name = self.ui.comPortSelector.itemData(index)
+        comport = self.comports.get(port_name,None)
+        if comport is not None:
+            self.patch_bind_address.update({self.activatedPatch:comport})
+            # add comport to serialport manager
             
             
-
-    def set_up_attena(self, attenas: int) -> None:
-        if attenas > len(self.antennas):
-            self.add_attena(attenas - len(self.antennas))
-        elif attenas < len(self.antennas):
-            self.remove_attena(len(self.antennas) - attenas)
-
+        
+        else:
+            debug("Comport might have been lost due to connection or update")
+            return
+        
+    def change_polarization(self,direction) -> None :
+        direction  = self.ui.polardirection.currentText 
+        
+        polarization  = POLARIZATION.get(direction, debug("Invalid Polarization Direction"))
+        
+        msg = dict({"polar":polarization})
+        
+        for port in self.comports:
+            self.serial_manager.write(port,msg)
+        
+        
+    
+    def lightup_patch(self,patch) -> None:
+        
+        comport = self.patch_bind_address.get(patch)
+        
+        msg = dict({"led":1})
+        
+        self.serial_manager.write(comport,msg)
+    
+    
+    
+    
+    
     """
         Control Panel Buttons
     """
