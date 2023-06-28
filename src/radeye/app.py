@@ -16,7 +16,7 @@ except ImportError:
 
 from PySide6.QtUiTools import QUiLoader
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtWidgets import QApplication, QMainWindow,QGraphicsEllipseItem
+from PySide6.QtWidgets import QApplication, QMainWindow, QGraphicsEllipseItem
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 from PySide6.QtCore import (
     QFile,
@@ -29,6 +29,7 @@ from PySide6.QtCore import (
     QTimerEvent,
     QEvent,
 )
+from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QMouseEvent
 from PySide6.QtGui import QIcon, QPixmap
 
@@ -40,6 +41,8 @@ import matplotlib.cm as cm
 import plotly
 from plotly.graph_objects import Figure, Scatter
 import plotly.express as px
+import plotly.offline as pyo
+import plotly.graph_objects as plo
 
 
 from fxpmath import Fxp
@@ -56,13 +59,14 @@ from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
 from radeye.panel_ui import Ui_MainWindow
 from radeye.components.component import TcpClient, Data, SocketState, Patch, Attena
-from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map , split_channels
-from radeye.ComPort import QSerialPortManger,REGISTER_MAP, POLARIZATION
+from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map, split_channels
+from radeye.ComPort import QSerialPortManger, REGISTER_MAP, POLARIZATION
 import radeye.attena_rc
+
 # from qt_material import apply_stylesheet
 
-from radeye.phasearray.antenna.antenna import  param_keys
-from radeye.phasearray.antenna.pattern import CalPattern,calculate_phaseshift
+from radeye.phasearray.antenna.antenna import param_keys
+from radeye.phasearray.antenna.pattern import CalPattern, calculate_phaseshift
 
 waveform = Data()
 
@@ -78,27 +82,33 @@ class radeye(QMainWindow):
         self.ui.setupUi(self)
 
         """Constants"""
-        self.window_list = ["Square", "Chebyshev", "Taylor", "Hamming", "Hann","Blackman"]
+        self.window_list = [
+            "Square",
+            "Chebyshev",
+            "Taylor",
+            "Hamming",
+            "Hann",
+            "Blackman",
+        ]
         self.plot_list = ["3D (Az-El-Amp)", "2D Cartesian", "2D Polar", "Array layout"]
         self.array_config = dict()
         self.activatedPatch = None
         # self.array_config = dict(zip(param_keys, np.zeros(len(param_keys))))
         self.fix_azimuth = False
-        
+
         """Serial port panel"""
-        self.serial_manager = QSerialPortManger(["phase","gain"],REGISTER_MAP)
+        self.serial_manager = QSerialPortManger(["phase", "gain"], REGISTER_MAP)
         self.comports = {}
         self.ui.findComPortButton.clicked.connect(self.update_comport_list)
         self.ui.comPortSelect.activated.connect(self.bind_comport_to_patch)
-        self.patch_bind_address={}
-        self.ui.led.clicked.connect(lambda : self.lightup_patch(self.activatedPatch))
-        
-        
+        self.patch_bind_address = {}
+        self.ui.led.clicked.connect(lambda: self.lightup_patch(self.activatedPatch))
+
         """Data Acquisition panel"""
 
         self.ui.trafficlight.setPixmap(QPixmap(REDLIGHT))
         self.client = TcpClient(self.ui)
-        self.client.socket.readyRead.connect(lambda : self.client.get_waveform(waveform))
+        self.client.socket.readyRead.connect(lambda: self.client.get_waveform(waveform))
         self.ui.addressText.editingFinished.connect(
             lambda: self.client.update_hostname(self.ui.addressText.text())
         )
@@ -110,7 +120,10 @@ class radeye(QMainWindow):
         self.ui.stopButton.toggled.connect(self.STOP)
         self.ui.runButton.clicked.connect(self.RUN)
         self.ui.sizeText.editingFinished.connect(self.client.update_size)
-        
+
+        self.ui.processView = QWebEngineView(self.ui.RxPanel)
+        self.ui.dataView = QWebEngineView(self.ui.RxPanel)
+
         self.timer = QTimer()
         self.timer.timeout.connect(self.RUN)
         self.timer.start(100)
@@ -131,9 +144,6 @@ class radeye(QMainWindow):
         self.ui.polardirection.addItems(["clockwise", "anticlockwise"])
 
         # self.calpattern.configUpdated.connect(self.calpattern_thread.start())
-
-
-        
 
         self.canvas3d = gl.GLViewWidget()
         self.canvas3d_array = pg.GraphicsLayoutWidget()
@@ -179,65 +189,55 @@ class radeye(QMainWindow):
             self.ui.label_adjsidelobey.setVisible,
             self.ui.hs_adjsidelobey.setVisible,
         ]
-        
+
         self.ui.cb_windowx.addItems(self.window_list)
         self.ui.cb_windowy.addItems(self.window_list)
-        
 
-
-        
         # set default to rectangle window
         self.windowx_config(0)
         self.windowy_config(0)
-        
-        
-        self.ui.cb_windowx.currentIndexChanged.connect(self.windowx_config)     
+
+        self.ui.cb_windowx.currentIndexChanged.connect(self.windowx_config)
         self.ui.cb_windowy.currentIndexChanged.connect(self.windowy_config)
-    
+
         """
         Value changed in UI
         """
         """ Array Config"""
-        self.ui.sb_sizex.valueChanged.connect(self.size_x_changed) 
-        self.ui.sb_sizey.valueChanged.connect(self.size_y_changed) 
-        
-        self.ui.dsb_spacingx.valueChanged.connect(self.spacing_x_changed) 
+        self.ui.sb_sizex.valueChanged.connect(self.size_x_changed)
+        self.ui.sb_sizey.valueChanged.connect(self.size_y_changed)
+
+        self.ui.dsb_spacingx.valueChanged.connect(self.spacing_x_changed)
         self.ui.dsb_spacingy.valueChanged.connect(self.spacing_y_changed)
         """ Window Config"""
         # update idx
         self.ui.cb_windowx.currentIndexChanged.connect(self.window_x_changed)
         self.ui.cb_windowy.currentIndexChanged.connect(self.window_y_changed)
-        
+
         """Side Lobe"""
         # update side lobe
-        self.ui.hs_sidelobex.valueChanged.connect(self.sidelobex_hs_moved) 
+        self.ui.hs_sidelobex.valueChanged.connect(self.sidelobex_hs_moved)
         self.ui.hs_sidelobey.valueChanged.connect(self.sidelobey_hs_moved)
-        
+
         self.ui.hs_adjsidelobex.valueChanged.connect(self.adjsidelobex_hs_moved)
         self.ui.hs_adjsidelobey.valueChanged.connect(self.adjsidelobey_hs_moved)
-        
+
         self.ui.sb_sidelobex.valueChanged.connect(self.sidelobex_changed)
         self.ui.sb_sidelobey.valueChanged.connect(self.sidelobey_changed)
-        
+
         self.ui.sb_adjsidelobex.valueChanged.connect(self.adjsidelobex_changed)
         self.ui.sb_adjsidelobey.valueChanged.connect(self.adjsidelobey_changed)
-        
-        
+
         self.ui.sb_sidelobex.valueChanged.connect(self.sllx_changed)
         self.ui.sb_sidelobey.valueChanged.connect(self.slly_changed)
-        
+
         self.ui.sb_adjsidelobex.valueChanged.connect(self.nbarx_changed)
         self.ui.sb_adjsidelobey.valueChanged.connect(self.nbary_changed)
-        
-        
-        
-        
-        
 
         """Steering"""
         self.ui.dsb_angleaz.valueChanged.connect(self.beam_az_changed)
         self.ui.dsb_angleel.valueChanged.connect(self.beam_el_changed)
-        
+
         self.ui.dsb_angleaz.valueChanged.connect(self.az_changed)
         self.ui.hs_angleaz.valueChanged.connect(self.az_hs_moved)
         self.ui.dsb_angleel.valueChanged.connect(self.el_changed)
@@ -250,28 +250,28 @@ class radeye(QMainWindow):
         self.ui.rbhs_azimuth.valueChanged.connect(self.fix_az_hs_moved)
         self.ui.rbsb_elevation.valueChanged.connect(self.fix_el_changed)
         self.ui.rbhs_elevation.valueChanged.connect(self.fix_el_hs_moved)
-        
-        
+
         """Plot"""
         self.ui.cb_plottype.addItems(self.plot_list)
         self.ui.cb_plottype.currentIndexChanged.connect(self.plot_type_changed)
 
         self.ui.rb_azimuth.clicked.connect(self.rb_azimuth_clicked)
         self.ui.rb_elevation.clicked.connect(self.rb_elevation_clicked)
-        
+
         self.ui.rbsb_azimuth.valueChanged.connect(self.plot_az_changed)
         self.ui.rbsb_elevation.valueChanged.connect(self.plot_el_changed)
 
-       
         self.ui.spinBox_polarMinAmp.valueChanged.connect(
-            self.polar_min_amp_value_changed)
+            self.polar_min_amp_value_changed
+        )
         self.ui.horizontalSlider_polarMinAmp.valueChanged.connect(
-            self.polar_min_amp_slider_moved)
+            self.polar_min_amp_slider_moved
+        )
 
         self.ui.label_polarMinAmp.setVisible(False)
         self.ui.spinBox_polarMinAmp.setVisible(False)
         self.ui.horizontalSlider_polarMinAmp.setVisible(False)
-        
+
         # self.ui.actionExport_array_config.triggered.connect(
         #     self.export_array_config)
         # self.ui.actionExport_pattern_data.triggered.connect(
@@ -280,7 +280,7 @@ class radeye(QMainWindow):
         # self.ui.actionQuit.triggered.connect(self.quit)
         # self.ui.actionHelp.triggered.connect(self.help)
         # self.ui.actionAbout.triggered.connect(self.about)
-        
+
         """add to save config and load config
         """
         """Beamforming Config Panel
@@ -290,98 +290,131 @@ class radeye(QMainWindow):
 
         self.ui.gridLayout.update()
 
-
         self.show()
 
-
     """ Window Configuration"""
+
     def window_config(self, direction: str, window_idx: int):
         ui_cfg = {"x": self.window_ui_cfg_x, "y": self.window_ui_cfg_y}
-        window_cfg = self.window_cfg.get(self.window_list[window_idx],self.window_cfg["Default"])
-        apply_map (ui_cfg[direction],window_cfg)
- 
-    
-    def update_array_config(self,key:str,value) -> None:
-        if key in ['sllx','slly']:
+        window_cfg = self.window_cfg.get(
+            self.window_list[window_idx], self.window_cfg["Default"]
+        )
+        apply_map(ui_cfg[direction], window_cfg)
+
+    def update_array_config(self, key: str, value) -> None:
+        if key in ["sllx", "slly"]:
             self.array_config[key] = -value
         else:
             self.array_config[key] = value
         self.update_pattern()
-        
-    def update_array_config_list(self,keys:list[str],values) -> None:
-        for key,value in zip(keys,values):
-            if key in ['sllx','slly']:
+
+    def update_array_config_list(self, keys: list[str], values) -> None:
+        for key, value in zip(keys, values):
+            if key in ["sllx", "slly"]:
                 self.array_config[key] = -value
             else:
                 self.array_config[key] = value
-        
+
         self.update_pattern()
-        
-    
+
     # dispatch window config function
-    def windowx_config(self,window_idx:int) : self.window_config("x",window_idx)
-    def windowy_config(self,window_idx:int) : self.window_config("y",window_idx)
+    def windowx_config(self, window_idx: int):
+        self.window_config("x", window_idx)
+
+    def windowy_config(self, window_idx: int):
+        self.window_config("y", window_idx)
+
     # window idx changed
-    def window_x_changed(self, idx:int)     : self.update_array_config('windowx',idx)
-    def window_y_changed(self, idx:int)     : self.update_array_config('windowy',idx)
+    def window_x_changed(self, idx: int):
+        self.update_array_config("windowx", idx)
+
+    def window_y_changed(self, idx: int):
+        self.update_array_config("windowy", idx)
+
     # size changed
-    def size_x_changed(self,value:int)      : self.update_array_config('size_x',value)
-    def size_y_changed(self,value:int)      : self.update_array_config('size_y',value)
+    def size_x_changed(self, value: int):
+        self.update_array_config("size_x", value)
+
+    def size_y_changed(self, value: int):
+        self.update_array_config("size_y", value)
+
     # spacing changed
-    def spacing_x_changed(self,value:float) : self.update_array_config('spacing_x',value)
-    def spacing_y_changed(self,value:float) : self.update_array_config('spacing_y',value)
+    def spacing_x_changed(self, value: float):
+        self.update_array_config("spacing_x", value)
+
+    def spacing_y_changed(self, value: float):
+        self.update_array_config("spacing_y", value)
+
     # beam angle changed
-    def beam_az_changed(self,value:float)   : self.update_array_config('beam_az',value)
-    def beam_el_changed(self,value:float)   : self.update_array_config('beam_el',value)
+    def beam_az_changed(self, value: float):
+        self.update_array_config("beam_az", value)
+
+    def beam_el_changed(self, value: float):
+        self.update_array_config("beam_el", value)
+
     # side lobe db changed
-    def sllx_changed(self,value:int)        : self.update_array_config('sllx',value)
-    def slly_changed(self,value:int)        : self.update_array_config('slly',value)
+    def sllx_changed(self, value: int):
+        self.update_array_config("sllx", value)
+
+    def slly_changed(self, value: int):
+        self.update_array_config("slly", value)
+
     # number of bars changed
-    def nbarx_changed(self,value:int)       : self.update_array_config('nbarx',value)
-    def nbary_changed(self,value:int)       : self.update_array_config('nbary',value)
+    def nbarx_changed(self, value: int):
+        self.update_array_config("nbarx", value)
+
+    def nbary_changed(self, value: int):
+        self.update_array_config("nbary", value)
+
     # size of fft changed
-    def nfft_az_changed(self,value:int)     : self.update_array_config('nfft_az',value)
-    def nfft_el_changed(self,value:int)     : self.update_array_config('nfft_el',value)
+    def nfft_az_changed(self, value: int):
+        self.update_array_config("nfft_az", value)
+
+    def nfft_el_changed(self, value: int):
+        self.update_array_config("nfft_el", value)
+
     # plot angle changed
-    def plot_az_changed(self,value:float)   : self.update_array_config('plot_az',value)
-    def plot_el_changed(self,value:float)   : self.update_array_config('plot_el',value)
-    
+    def plot_az_changed(self, value: float):
+        self.update_array_config("plot_az", value)
+
+    def plot_el_changed(self, value: float):
+        self.update_array_config("plot_el", value)
 
     def update_pattern(self) -> None:
         self.calpattern.update_config(self.array_config)
-        
+
     def sidelobex_changed(self, value):
         self.ui.hs_sidelobex.setValue(value)
         self.update_pattern()
-    
+
     def sidelobex_hs_moved(self, value):
         self.ui.sb_sidelobex.setValue(value)
         self.update_pattern()
-    
+
     def sidelobey_changed(self, value):
         self.ui.hs_sidelobey.setValue(value)
         self.update_pattern()
-    
+
     def sidelobey_hs_moved(self, value):
         self.ui.sb_sidelobey.setValue(value)
         self.update_pattern()
-    
+
     def adjsidelobex_changed(self, value):
         self.ui.hs_adjsidelobex.setValue(value)
         self.update_pattern()
-    
+
     def adjsidelobex_hs_moved(self, value):
         self.ui.sb_adjsidelobex.setValue(value)
         self.update_pattern()
-    
+
     def adjsidelobey_changed(self, value):
         self.ui.hs_adjsidelobey.setValue(value)
         self.update_pattern()
-    
+
     def adjsidelobey_hs_moved(self, value):
         self.ui.sb_adjsidelobey.setValue(value)
         self.update_pattern()
-   
+
     def az_changed(self, value):
         self.ui.hs_angleaz.setValue(value * 10)
         self.update_pattern()
@@ -413,7 +446,7 @@ class radeye(QMainWindow):
     def fix_el_hs_moved(self, value):
         self.ui.rbsb_elevation.setValue(value / 10)
         self.update_pattern()
-        
+
     def rb_azimuth_clicked(self):
         self.fix_azimuth = True
         self.ui.rbhs_azimuth.setEnabled(True)
@@ -423,8 +456,10 @@ class radeye(QMainWindow):
         self.ui.rbhs_elevation.setEnabled(False)
         self.nfft_az = 1
         self.nfft_el = 4096
-        self.cartesianView.setLabel(axis='bottom', text='Elevation', units='°')
-        self.update_array_config_list(['nfft_az','nfft_el'],[self.nfft_az,self.nfft_el])
+        self.cartesianView.setLabel(axis="bottom", text="Elevation", units="°")
+        self.update_array_config_list(
+            ["nfft_az", "nfft_el"], [self.nfft_az, self.nfft_el]
+        )
 
     def rb_elevation_clicked(self):
         self.fix_azimuth = False
@@ -435,8 +470,10 @@ class radeye(QMainWindow):
         self.ui.rbhs_azimuth.setEnabled(False)
         self.nfft_az = 4096
         self.nfft_el = 1
-        self.cartesianView.setLabel(axis='bottom', text='Azimuth', units='°')
-        self.update_array_config_list(['nfft_az','nfft_el'],[self.nfft_az,self.nfft_el])
+        self.cartesianView.setLabel(axis="bottom", text="Azimuth", units="°")
+        self.update_array_config_list(
+            ["nfft_az", "nfft_el"], [self.nfft_az, self.nfft_el]
+        )
 
     def polar_min_amp_value_changed(self, value):
         self.ui.horizontalSlider_polarMinAmp.setValue(value)
@@ -447,9 +484,6 @@ class radeye(QMainWindow):
         self.ui.spinBox_polarMinAmp.setValue(value)
         self.polarAmpOffset = -value
         self.update_pattern()
-    
-
-        
 
     def init_figure(self):
         """Init figures"""
@@ -466,7 +500,7 @@ class radeye(QMainWindow):
         self.plot_type_changed(self.ui.cb_plottype.currentIndex())
 
         """Surface view"""
-        self.cmap = cm.get_cmap('jet')
+        self.cmap = cm.get_cmap("jet")
         self.minZ = -100
         self.maxZ = 0
 
@@ -506,9 +540,8 @@ class radeye(QMainWindow):
         self.array_view.addItem(self.array_plot)
 
         self.array_view.setAspectLocked()
-        self.array_view.setLabel(axis='bottom', text='Horizontal x', units='λ')
-        self.array_view.setLabel(
-            axis='left', text='Vertical y', units='λ')
+        self.array_view.setLabel(axis="bottom", text="Horizontal x", units="λ")
+        self.array_view.setLabel(axis="left", text="Vertical y", units="λ")
         self.array_view.showGrid(x=True, y=True)
 
         self.array_plot.setPen(pg.mkPen(color=(244, 143, 177, 120), width=1))
@@ -530,12 +563,14 @@ class radeye(QMainWindow):
 
         self.cartesianView.setXRange(-90, 90)
         self.cartesianView.setYRange(-80, 0)
-        self.cartesianView.setLabel(axis='bottom', text='Angle', units='°')
+        self.cartesianView.setLabel(axis="bottom", text="Angle", units="°")
         self.cartesianView.setLabel(
-            axis='left', text='Normalized amplitude', units='dB')
+            axis="left", text="Normalized amplitude", units="dB"
+        )
         self.cartesianView.showGrid(x=True, y=True, alpha=0.5)
         self.cartesianView.setLimits(
-            xMin=-90, xMax=90, yMin=-110, yMax=1, minXRange=0.1, minYRange=0.1)
+            xMin=-90, xMax=90, yMin=-110, yMax=1, minXRange=0.1, minYRange=0.1
+        )
 
         """Polar view"""
         self.polarView = pg.PlotItem()
@@ -553,33 +588,32 @@ class radeye(QMainWindow):
         self.polarView.addItem(self.polarPlot)
 
         self.polarView.setAspectLocked()
-        self.polarView.hideAxis('left')
-        self.polarView.hideAxis('bottom')
+        self.polarView.hideAxis("left")
+        self.polarView.hideAxis("bottom")
 
-        self.circleLabel.append(pg.TextItem('0 dB'))
+        self.circleLabel.append(pg.TextItem("0 dB"))
         self.polarView.addItem(self.circleLabel[0])
         self.circleLabel[0].setPos(self.polarAmpOffset, 0)
         for circle_idx in range(0, 6):
             self.circleList.append(
                 QGraphicsEllipseItem(
-                    -self.polarAmpOffset + self.polarAmpOffset / 6 *
-                    circle_idx,
-                    -self.polarAmpOffset + self.polarAmpOffset / 6 *
-                    circle_idx,
-                    (self.polarAmpOffset - self.polarAmpOffset / 6 *
-                     circle_idx) * 2,
-                    (self.polarAmpOffset - self.polarAmpOffset / 6 *
-                     circle_idx) * 2))
+                    -self.polarAmpOffset + self.polarAmpOffset / 6 * circle_idx,
+                    -self.polarAmpOffset + self.polarAmpOffset / 6 * circle_idx,
+                    (self.polarAmpOffset - self.polarAmpOffset / 6 * circle_idx) * 2,
+                    (self.polarAmpOffset - self.polarAmpOffset / 6 * circle_idx) * 2,
+                )
+            )
             self.circleList[circle_idx].setStartAngle(2880)
             self.circleList[circle_idx].setSpanAngle(2880)
             self.circleList[circle_idx].setPen(pg.mkPen(0.2))
             self.polarView.addItem(self.circleList[circle_idx])
 
             self.circleLabel.append(
-                pg.TextItem(str(-self.polarAmpOffset / 6 * (circle_idx + 1))))
+                pg.TextItem(str(-self.polarAmpOffset / 6 * (circle_idx + 1)))
+            )
             self.circleLabel[circle_idx + 1].setPos(
-                self.polarAmpOffset - self.polarAmpOffset / 6 * (
-                    circle_idx + 1), 0)
+                self.polarAmpOffset - self.polarAmpOffset / 6 * (circle_idx + 1), 0
+            )
             self.polarView.addItem(self.circleLabel[circle_idx + 1])
 
         self.polarView.addLine(x=0, pen=0.6)
@@ -587,16 +621,13 @@ class radeye(QMainWindow):
         self.polarView.addLine(y=0, pen=0.3).setAngle(45)
         self.polarView.addLine(y=0, pen=0.3).setAngle(-45)
         self.polarView.setMouseEnabled(x=False, y=False)
-        
-        
-        
-        
+
     def update_figure(self, azimuth, elevation, pattern, x, y, weight):
         self.exp_config = np.zeros((np.shape(x)[0], 4))
         self.exp_config[:, 0] = x
         self.exp_config[:, 1] = y
         self.exp_config[:, 2] = np.abs(weight)
-        self.exp_config[:, 3] = np.angle(weight)/np.pi*180
+        self.exp_config[:, 3] = np.angle(weight) / np.pi * 180
 
         el_grid, az_grid = np.meshgrid(elevation, azimuth)
         el_ravel = el_grid.ravel()
@@ -606,16 +637,17 @@ class radeye(QMainWindow):
         self.exp_pattern[:, 1] = el_ravel
         self.exp_pattern[:, 2] = pattern.ravel()
 
-        if self.plot_list[self.plot_type_idx] == '3D (Az-El-Amp)':
-            rgba_img = self.cmap((pattern-self.minZ)/(self.maxZ - self.minZ))
+        if self.plot_list[self.plot_type_idx] == "3D (Az-El-Amp)":
+            rgba_img = self.cmap((pattern - self.minZ) / (self.maxZ - self.minZ))
             self.surface_plot.setData(
-                x=azimuth, y=elevation, z=pattern, colors=rgba_img)
-        elif self.plot_list[self.plot_type_idx] == '2D Cartesian':
+                x=azimuth, y=elevation, z=pattern, colors=rgba_img
+            )
+        elif self.plot_list[self.plot_type_idx] == "2D Cartesian":
             if self.fix_azimuth:
                 self.cartesianPlot.setData(elevation, pattern)
             else:
                 self.cartesianPlot.setData(azimuth, pattern)
-        elif self.plot_list[self.plot_type_idx] == '2D Polar':
+        elif self.plot_list[self.plot_type_idx] == "2D Polar":
             pattern = pattern + self.polarAmpOffset
             pattern[np.where(pattern < 0)] = 0
             if self.fix_azimuth:
@@ -628,33 +660,31 @@ class radeye(QMainWindow):
             self.circleLabel[0].setPos(self.polarAmpOffset, 0)
             for circle_idx in range(0, 6):
                 self.circleList[circle_idx].setRect(
-                    -self.polarAmpOffset + self.polarAmpOffset / 6 *
-                    circle_idx,
-                    -self.polarAmpOffset + self.polarAmpOffset / 6 *
-                    circle_idx,
-                    (self.polarAmpOffset - self.polarAmpOffset / 6 *
-                     circle_idx) * 2,
-                    (self.polarAmpOffset - self.polarAmpOffset / 6 *
-                     circle_idx) * 2)
+                    -self.polarAmpOffset + self.polarAmpOffset / 6 * circle_idx,
+                    -self.polarAmpOffset + self.polarAmpOffset / 6 * circle_idx,
+                    (self.polarAmpOffset - self.polarAmpOffset / 6 * circle_idx) * 2,
+                    (self.polarAmpOffset - self.polarAmpOffset / 6 * circle_idx) * 2,
+                )
                 self.circleLabel[circle_idx + 1].setText(
-                    str(round(-self.polarAmpOffset / 6 * (circle_idx + 1), 1)))
+                    str(round(-self.polarAmpOffset / 6 * (circle_idx + 1), 1))
+                )
                 self.circleLabel[circle_idx + 1].setPos(
-                    self.polarAmpOffset - self.polarAmpOffset / 6 * (
-                        circle_idx + 1), 0)
+                    self.polarAmpOffset - self.polarAmpOffset / 6 * (circle_idx + 1), 0
+                )
             self.polarPlot.setData(x, y)
-        elif self.plot_list[self.plot_type_idx] == 'Array layout':
+        elif self.plot_list[self.plot_type_idx] == "Array layout":
             self.array_plot.setData(x=x, y=y, size=6)
-        
+
     def plot_type_changed(self, plot_idx):
         self.plot_type_idx = plot_idx
-        
-        canvas_cfg =[
+
+        canvas_cfg = [
             self.canvas2d_cartesian.setVisible,
             self.canvas2d_polar.setVisible,
             self.canvas3d_array.setVisible,
             self.canvas3d.setVisible,
         ]
-        beam_en_cfg =[
+        beam_en_cfg = [
             self.ui.rb_azimuth.setEnabled,
             self.ui.rbsb_azimuth.setEnabled,
             self.ui.rbhs_azimuth.setEnabled,
@@ -662,95 +692,90 @@ class radeye(QMainWindow):
             self.ui.rbsb_elevation.setEnabled,
             self.ui.rbhs_elevation.setEnabled,
         ]
-        beam_checked_cfg =[
+        beam_checked_cfg = [
             self.ui.rb_azimuth.setChecked,
-            self.ui.rb_elevation.setChecked
+            self.ui.rb_elevation.setChecked,
         ]
         polar_cfg = [
             self.ui.label_polarMinAmp.setVisible,
             self.ui.spinBox_polarMinAmp.setVisible,
-            self.ui.horizontalSlider_polarMinAmp.setVisible
+            self.ui.horizontalSlider_polarMinAmp.setVisible,
         ]
 
-    
-        if self.plot_list[plot_idx] == '3D (Az-El-Amp)':
-            apply_map(canvas_cfg, [0,0,0,1])
-            apply_map(beam_en_cfg, [0,0,0,0,0,0])
-            apply_map(polar_cfg, [0,0,0])
-            
+        if self.plot_list[plot_idx] == "3D (Az-El-Amp)":
+            apply_map(canvas_cfg, [0, 0, 0, 1])
+            apply_map(beam_en_cfg, [0, 0, 0, 0, 0, 0])
+            apply_map(polar_cfg, [0, 0, 0])
+
             self.nfft_az = 512
             self.nfft_el = 512
-  
-        elif self.plot_list[plot_idx] == '2D Cartesian':
-            apply_map(canvas_cfg, [1,0,0,0])            
-            
+
+        elif self.plot_list[plot_idx] == "2D Cartesian":
+            apply_map(canvas_cfg, [1, 0, 0, 0])
+
             if self.fix_azimuth:
-                apply_map(beam_en_cfg, [1,1,1,1,0,0])
-                apply_map(beam_checked_cfg, [1,0])
-                
+                apply_map(beam_en_cfg, [1, 1, 1, 1, 0, 0])
+                apply_map(beam_checked_cfg, [1, 0])
+
                 self.nfft_az = 1
                 self.nfft_el = 4096
-                self.cartesianView.setLabel(
-                    axis='bottom', text='Elevation', units='°')
+                self.cartesianView.setLabel(axis="bottom", text="Elevation", units="°")
             else:
-                apply_map(beam_en_cfg, [1,0,0,1,1,1])
-                apply_map(beam_checked_cfg, [0,1])
-                
+                apply_map(beam_en_cfg, [1, 0, 0, 1, 1, 1])
+                apply_map(beam_checked_cfg, [0, 1])
+
                 self.nfft_az = 4096
                 self.nfft_el = 1
-                self.cartesianView.setLabel(
-                    axis='bottom', text='Azimuth', units='°')
+                self.cartesianView.setLabel(axis="bottom", text="Azimuth", units="°")
 
-            apply_map(polar_cfg, [0,0,0])
- 
-        elif self.plot_list[plot_idx] == '2D Polar':
-            apply_map(canvas_cfg, [0,1,0,0])
+            apply_map(polar_cfg, [0, 0, 0])
 
+        elif self.plot_list[plot_idx] == "2D Polar":
+            apply_map(canvas_cfg, [0, 1, 0, 0])
 
             if self.fix_azimuth:
-                apply_map(beam_en_cfg, [1,1,1,1,0,0])
-                apply_map(beam_checked_cfg, [1,0])
-                
+                apply_map(beam_en_cfg, [1, 1, 1, 1, 0, 0])
+                apply_map(beam_checked_cfg, [1, 0])
+
                 self.nfft_az = 1
                 self.nfft_el = 4096
-            else:   
-                apply_map(beam_en_cfg, [1,0,0,1,1,1])
-                apply_map(beam_checked_cfg, [0,1])
-                
+            else:
+                apply_map(beam_en_cfg, [1, 0, 0, 1, 1, 1])
+                apply_map(beam_checked_cfg, [0, 1])
+
                 self.nfft_az = 4096
                 self.nfft_el = 1
-                
-            apply_map(polar_cfg,    [1,1,1])
 
+            apply_map(polar_cfg, [1, 1, 1])
 
+        elif self.plot_list[plot_idx] == "Array layout":
+            apply_map(canvas_cfg, [0, 0, 1, 0])
+            apply_map(beam_en_cfg, [0, 0, 0, 0, 0, 0])
+            apply_map(polar_cfg, [0, 0, 0])
 
-        elif self.plot_list[plot_idx] == 'Array layout':
-            apply_map(canvas_cfg, [0,0,1,0])
-            apply_map(beam_en_cfg, [0,0,0,0,0,0])
-            apply_map(polar_cfg,    [0,0,0])
-        
-        self.update_array_config_list(['nfft_az','nfft_el'],[self.nfft_az,self.nfft_el])
-        
+        self.update_array_config_list(
+            ["nfft_az", "nfft_el"], [self.nfft_az, self.nfft_el]
+        )
+
     """
     Beamforming Panel Configuration
     """
+
     def update_phase(self):
         theta = self.ui.dsb_angleaz.value()
         phi = self.ui.dsb_angleel.value()
-        print(theta,phi)
-        phase = calculate_phaseshift(self.array_config,theta,phi)
+        print(theta, phi)
+        phase = calculate_phaseshift(self.array_config, theta, phi)
         """
         1 Patches has 4x4 Antennas
         """
-        size_x  = self.array_config['size_x']
-        size_y  = self.array_config['size_y']
-        channels = split_channels(phase,4,4)
-       
-        for patch,channel in zip(self.patches,channels):
+        size_x = self.array_config["size_x"]
+        size_y = self.array_config["size_y"]
+        channels = split_channels(phase, 4, 4)
+
+        for patch, channel in zip(self.patches, channels):
             patch.set_phases(channel)
 
-
-    
     def update_antenna(self, antennas: list) -> None:
         if self.ui.channelGrid.count() > 0:
             self.remove_antenna()
@@ -772,14 +797,12 @@ class radeye(QMainWindow):
             self.ui.channelGrid.removeWidget(self.antennas[i])
             self.antennas[i].hide()
 
-    def assign_patch(
-        self,obj: object
-    ) -> None:
-        self.activatedPatch = obj 
-        # 
+    def assign_patch(self, obj: object) -> None:
+        self.activatedPatch = obj
+        #
 
     def add_patch(self, numberOfPatch: int) -> None:
-        size_x = self.array_config['size_x']
+        size_x = self.array_config["size_x"]
         for i in range(0, numberOfPatch):
             if i >= len(self.patches):
                 self.patches.append(Patch())
@@ -795,11 +818,11 @@ class radeye(QMainWindow):
             # TODO : clicked patch
             self.patches[i].clicked.connect(self.assign_patch)
             # TODO: reassign ComPorts
-            
+
             self.ui.panelGrid.addWidget(
                 self.patches[i],
-                int(i / int(size_x/4)),
-                i % int(size_x/4),
+                int(i / int(size_x / 4)),
+                i % int(size_x / 4),
             )
             self.patches[i].show()
 
@@ -807,73 +830,64 @@ class radeye(QMainWindow):
         for i in reversed(range(0, numberOfPatch)):
             self.ui.panelGrid.removeWidget(self.patches[i])
             self.patches[i].hide()
-            # TODO: disconnect ComPorts 
+            # TODO: disconnect ComPorts
             # self.patch_bind_address.update({self.patches[i]:None})s
-
 
     def update_patch(self) -> None:
         # format text to integer, if not integer erase then
-        size_x = int(self.array_config['size_x']/4)
-        size_y = int(self.array_config['size_y']/4)
+        size_x = int(self.array_config["size_x"] / 4)
+        size_y = int(self.array_config["size_y"] / 4)
         numAntennas = size_x * size_y
-            
+
         # get the number of rows and columns
         self.remove_patch(len(self.patches))
         self.add_patch(numAntennas)
-        
-        
+
     """ComPort Panel Configuration"""
+
     def update_comport_list(self) -> None:
         self.ui.comPortSelect.clear()
         found_comports = self.serial_manager.init_serial()
         if not found_comports:
             debug("No comport found")
             return
-        self.comports = dict([(port.portName(),port) 
-              for port in found_comports])
+        self.comports = dict([(port.portName(), port) for port in found_comports])
         self.ui.comPortSelect.addItems(list(self.comports.keys()))
-        
-    
-    def bind_comport_to_patch(self,index) -> None:
+
+    def bind_comport_to_patch(self, index) -> None:
         port_name = self.ui.comPortSelector.itemData(index)
-        comport = self.comports.get(port_name,None)
+        comport = self.comports.get(port_name, None)
         if comport is not None:
-            self.patch_bind_address.update({self.activatedPatch:comport})
+            self.patch_bind_address.update({self.activatedPatch: comport})
             # add comport to serialport manager
-            
-            
-        
+
         else:
             debug("Comport might have been lost due to connection or update")
             return
-        
-    def change_polarization(self,direction) -> None :
-        direction  = self.ui.polardirection.currentText 
-        
-        polarization  = POLARIZATION.get(direction, debug("Invalid Polarization Direction"))
-        
-        msg = dict({"polar":polarization})
-        
+
+    def change_polarization(self, direction) -> None:
+        direction = self.ui.polardirection.currentText
+
+        polarization = POLARIZATION.get(
+            direction, debug("Invalid Polarization Direction")
+        )
+
+        msg = dict({"polar": polarization})
+
         for port in self.comports:
-            self.serial_manager.write(port,msg)
-        
-        
-    
-    def lightup_patch(self,patch) -> None:
-        
+            self.serial_manager.write(port, msg)
+
+    def lightup_patch(self, patch) -> None:
         comport = self.patch_bind_address.get(patch)
-        
-        msg = dict({"led":1})
-        
-        self.serial_manager.write(comport,msg)
-    
-    
-    
-    
-    
+
+        msg = dict({"led": 1})
+
+        self.serial_manager.write(comport, msg)
+
     """
         Control Panel Buttons
     """
+
     def RUN(self):
         if (
             self.ui.runButton.isChecked()
@@ -890,14 +904,12 @@ class radeye(QMainWindow):
             self.client.send_waveform_query()
 
 
-
 def plot_waveform(x, y):
     global window, waveform
 
     # df = pd.DataFrame(dict(x=x, y=y))
     # fig = px.line(df, x="sample", y="normalized Amplitude")
     try:
-
         window.ui.dataView.plotItem.plot(x, y, clear=True)
         y_fft = np.fft.rfft(y)
         unit = {
@@ -908,12 +920,9 @@ def plot_waveform(x, y):
             "n": 1e-9,
         }
         convertUnit = lambda text: int(text[0:-1]) * unit.get(text[-1], 1)
-
-        fs = convertUnit(window.ui.sampleRateText.text()) 
-
+        fs = convertUnit(window.ui.sampleRateText.text())
         bandwidth = convertUnit(window.ui.bandWidthText.text())
         pulsewidth = convertUnit(window.ui.pulseWidthText.text())
-
 
         L = len(y_fft)
         f = fs * np.arange(0, L) / L / 2
@@ -925,8 +934,6 @@ def plot_waveform(x, y):
         window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
     finally:
         waveform.flush()
-
-
 
 
 def main():
