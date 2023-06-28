@@ -162,7 +162,7 @@
     <string>ExGain</string>
    </property>
   </widget>
-  <widget class="QComboBox" name="gainComboBox_2">
+  <widget class="QComboBox" name="exgainComboBox">
    <property name="geometry">
     <rect>
      <x>50</x>

@@ -15,7 +15,7 @@ except ImportError:
     import importlib_metadata
 
 from PySide6.QtUiTools import QUiLoader
-from PySide6.QtUiTools import QUiLoader
+
 from PySide6.QtWidgets import QApplication, QMainWindow,QGraphicsEllipseItem
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 from PySide6.QtCore import (
@@ -720,7 +720,7 @@ class radeye(QMainWindow):
                 self.nfft_az = 4096
                 self.nfft_el = 1
                 
-            apply_map(polar_cfg,    [1,1,1])
+            apply_map(polar_cfg, [1,1,1])
 
 
 
@@ -841,11 +841,12 @@ class radeye(QMainWindow):
             self.patch_bind_address.update({self.activatedPatch:comport})
             # add comport to serialport manager
             
-            
-        
         else:
             debug("Comport might have been lost due to connection or update")
             return
+        
+    def update_antenna_config(self) -> None:
+        self.comports
         
     def change_polarization(self,direction) -> None :
         direction  = self.ui.polardirection.currentText 

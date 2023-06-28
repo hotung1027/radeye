@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'attenasOcxzv.ui'
+## Form generated from reading UI file 'attena.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.0
 ##
@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QLabel,
     QSizePolicy, QWidget)
 
-class Ui_AttenaUi(QWidget):
+class Ui_AttenaUi(object):
     def setupUi(self, AttenaUi):
         if not AttenaUi.objectName():
             AttenaUi.setObjectName(u"AttenaUi")
@@ -60,10 +60,10 @@ class Ui_AttenaUi(QWidget):
         self.exGainLabel = QLabel(AttenaUi)
         self.exGainLabel.setObjectName(u"exGainLabel")
         self.exGainLabel.setGeometry(QRect(0, 110, 57, 14))
-        self.gainComboBox_2 = QComboBox(AttenaUi)
-        self.gainComboBox_2.setObjectName(u"gainComboBox_2")
-        self.gainComboBox_2.setGeometry(QRect(50, 110, 101, 22))
-        self.gainComboBox_2.setEditable(True)
+        self.exgainComboBox = QComboBox(AttenaUi)
+        self.exgainComboBox.setObjectName(u"exgainComboBox")
+        self.exgainComboBox.setGeometry(QRect(50, 110, 101, 22))
+        self.exgainComboBox.setEditable(True)
 
         self.retranslateUi(AttenaUi)
 

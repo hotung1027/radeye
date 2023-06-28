@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 ################################################################################
-## Form generated from reading UI file 'paneliNuLLL.ui'
+## Form generated from reading UI file 'panel.ui'
 ##
 ## Created by: Qt User Interface Compiler version 6.5.0
 ##
@@ -1025,7 +1025,7 @@ class Ui_MainWindow(object):
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 1087, 19))
+        self.menubar.setGeometry(QRect(0, 0, 1087, 22))
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
@@ -1046,6 +1046,7 @@ class Ui_MainWindow(object):
         self.addressLabel.setText(QCoreApplication.translate("MainWindow", u"IP Address:", None))
         self.addressText.setText(QCoreApplication.translate("MainWindow", u"192.168.1.10", None))
         self.portLabel.setText(QCoreApplication.translate("MainWindow", u"Port:", None))
+        self.portText.setText(QCoreApplication.translate("MainWindow", u"7", None))
         self.connectButton.setText(QCoreApplication.translate("MainWindow", u"Connect", None))
         self.groupBox_2.setTitle(QCoreApplication.translate("MainWindow", u"Control", None))
         self.runButton.setText(QCoreApplication.translate("MainWindow", u"RUN", None))
@@ -1053,9 +1054,13 @@ class Ui_MainWindow(object):
         self.stopButton.setText(QCoreApplication.translate("MainWindow", u"STOP", None))
         self.groupBox_3.setTitle(QCoreApplication.translate("MainWindow", u"Data Accuqsistion Config", None))
         self.sizeLabel.setText(QCoreApplication.translate("MainWindow", u"Size:", None))
+        self.sizeText.setText(QCoreApplication.translate("MainWindow", u"5000", None))
         self.sampleRateLabel.setText(QCoreApplication.translate("MainWindow", u"SampleRate:", None))
+        self.sampleRateText.setText(QCoreApplication.translate("MainWindow", u"250M", None))
         self.label.setText(QCoreApplication.translate("MainWindow", u"BandWidth:", None))
+        self.bandWidthText.setText(QCoreApplication.translate("MainWindow", u"250M", None))
         self.label_2.setText(QCoreApplication.translate("MainWindow", u"PulseWidth:", None))
+        self.pulseWidthText.setText(QCoreApplication.translate("MainWindow", u"20u", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.RxPanel), QCoreApplication.translate("MainWindow", u"Display", None))
         self.gb_arrayconfig.setTitle(QCoreApplication.translate("MainWindow", u"Array Config", None))
         self.gb_horizontal.setTitle(QCoreApplication.translate("MainWindow", u"Horizontal - x", None))

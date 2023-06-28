@@ -129,11 +129,13 @@ class TcpClient(QObject):
 
 # Single Channel
 class Attena(Ui_AttenaUi):
+    antennaConfigChanged = Signal(dict)
     def __init__(self, parent: QObject | None = ...) -> None:
         super(Attena, self).__init__()
         self.gain = 0
         self.phase = 0
         self.offset = 0
+        self.exgain = 0
         self.channel = 0
         self.mode = 0
         self.attenuation = 0
@@ -145,37 +147,57 @@ class Attena(Ui_AttenaUi):
     def setupUi(self,antennaUI):
         super(Attena,self).setupUi(self)
         self.gainComboBox.addItems([str(i) for i in GAIN])
+        self.exgainComboBox.addItems([str(i) for i in GAIN])
         self.offsetComboBox.addItems([str(i) for i in ANGLE])
         self.phaseComboBox.addItems([str(i) for i in ANGLE])   
         zeroIdx = findClosetFromItems(ANGLE,0)
         self.phaseComboBox.setCurrentIndex(zeroIdx)
         self.offsetComboBox.setCurrentIndex(zeroIdx)
+        self.gainComboBox.setCurrentIndex(0)
+        self.exgainComboBox.setCurrentIndex(0)
 
         self.gainComboBox.currentTextChanged.connect(lambda text: self.update_gain(float(text)))
+        self.exgainComboBox.currentTextChanged.connect(lambda text: self.update_exgain(float(text)))
         self.offsetComboBox.currentTextChanged.connect(lambda text: self.update_offset(float(text)))
         self.phaseComboBox.currentTextChanged.connect(lambda text: self.update_phase(float(text)))
                 
-        self.gain = self.config.get('gain',0)
-        self.phase = self.config.get('phase',0)
-        self.offset = self.config.get('offset',0)
-      
+        self.gain = self.config.get('gain',self.gainComboBox.itemData(self.gainComboBox.currentIndex()))
+        self.exgain = self.config.get('exgain',self.exgainComboBox.itemData(self.exgainComboBox.currentIndex()))
+        self.phase = self.config.get('phase',self.phaseComboBox.itemData(self.phaseComboBox.currentIndex()))
+        self.offset = self.config.get('offset',self.offsetComboBox.itemData(self.offsetComboBox.currentIndex()))
         
     
     def update_gain(self, gain:float)->None:
         self.gain = gain
         self.config['gain'] = self.gain
+        self.antennaConfigChanged.emit(self.config)
+        
+    def update_exgain(self, exgain:float)->None:
+        self.exgain = exgain
+        self.config['exgain'] = self.gain
+        self.antennaConfigChanged.emit(self.config)
         
     def update_phase(self, phase:float)->None:
         self.phase = phase
         self.config['phase'] = self.phase
+        self.antennaConfigChanged.emit(self.config)
         
-    def update_offset(self, offset):
+    def update_offset(self, offset:float)->None:
         self.offset = offset
         self.config['offset'] = self.offset
+        self.antennaConfigChanged.emit(self.config)
 
 
 # 2x2 Channel as single basic unit patch of Antenna
+    """
+        -----------------------
+        |Upper Left|Upper Right|
+        -----------------------
+        |Lower Left|Lower Right|
+        -----------------------
+    """
 class Patch(Ui_PatchUi):
+    patchConfigChanged = Signal(list(dict))
     changedActivatedElement = Signal(list)
     clicked = Signal(object)
     def __init__(self, parent: QObject | None = ...) -> None:
@@ -185,7 +207,6 @@ class Patch(Ui_PatchUi):
         self.keys = ["ul","ur","ll","lr"]
         self.array = dict()
         self.activatedAttena = []
-
         self.mouseEventFilter = MousePressEventFilter()
         self.installEventFilter(self.mouseEventFilter)
         # initialize antenna
@@ -200,14 +221,39 @@ class Patch(Ui_PatchUi):
         for i in range(4):
             self.array[i].setup(args[i])
 
-    def get_attenas(self):
-        return self.array
-    
 
     
+    def get_patch_config(self):
+        config = {}
+        antennas = self.get_attenas()
+        get_config = lambda keywords: [x.config.get(keywords,0) for x in antennas] 
+        phases = get_config('phase')
+        offsets = get_config('offset')
+        gains = get_config('gain')
+        exgains = get_config('exgain')
+        config.update({
+            'phase' : phases,
+            'offset' : offsets,
+            'gain' : gains,
+            'exgain' : exgains
+        })
+        return config
+    
+    
+    """
+        |2x2 Antenna 1|2x2 Antenna 2|
+        
+        |2x2 Antenna 3|2x2 Antenna 4|
+    """
+    """ grouped elementes"""    
+    def get_antennas(self):
+        for key in self.keys:
+            antennas = self.array.get(key)
+            yield antennas
+        
     
     def set_phases(self,phases):
-        """_summary_
+        """ set phases to antennas
 
         Args:
             phases (NDArray): expected the shape to be 4x4 antenna channel
@@ -224,6 +270,7 @@ class Patch(Ui_PatchUi):
                 phase = convert_phase(phase,0)
                 antenna.update_phase(phase)
                 antenna.phaseComboBox.setCurrentIndex(findClosetFromItems(ANGLE,phase))
+
 
     # parsing phrase into patch configuration with offset
     def parse(self,phase):

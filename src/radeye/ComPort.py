@@ -264,7 +264,7 @@ class QSerialPortManger(object):
     def connect(self, port):
         self.serialpool.append(port)
         self.serialpool[-1].moveToThread(self.worker)
-        self.serialpoll[-1].readRead.connect(self.read)
+        self.serialpoll[-1].readReady.connect(self.read)
         self.subscriber.bind_port(self.serialpool[-1])
 
     """Bind serial port to patch for us to lookup which patch to update or sending data"""
@@ -307,6 +307,7 @@ def connect_port(portInfo):
     if portInfo is not None:
         try:
             serialport.setPort(portInfo)
+            serialport.open()
         except:
             error("Error: Could not connect to port")
             # Not implemented yet
