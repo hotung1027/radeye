@@ -39,12 +39,17 @@ class Data(QObject):
                                     .decode('utf-8')    \
                                     .rstrip()           \
                                     .split(':')[0:-1]
-        y_data = np.array(y_data,dtype=np.int16)
-        y_data = vectorize(y_data, s16i11)
-        self.y_data = y_data
-        self.x_data = np.arange(0,len(self.y_data),1)
-        self.dataChanged.emit(self.x_data,self.y_data)
-
+        try:                            
+            y_data = np.array(y_data,dtype=np.int16)
+            y_data = vectorize(y_data, s16i11)
+            self.y_data = y_data
+            self.x_data = np.arange(0,len(self.y_data),1)
+            self.dataChanged.emit(self.x_data,self.y_data)
+        except Exception as e:
+            print(e)
+            print("Data Error")
+        finally:
+            self.flush()
 
     def update_data(self,x,y):
         self.x_data = x
@@ -197,7 +202,7 @@ class Attena(Ui_AttenaUi):
         -----------------------
     """
 class Patch(Ui_PatchUi):
-    patchConfigChanged = Signal(list(dict))
+    patchConfigChanged = Signal(list) # list[dict]
     changedActivatedElement = Signal(list)
     clicked = Signal(object)
     def __init__(self, parent: QObject | None = ...) -> None:

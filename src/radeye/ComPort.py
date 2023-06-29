@@ -192,14 +192,17 @@ class Subscriber(QObject):
 
         self.timer = QTimer()
         self.timer.setInterval(update_interval)
-        self.timer.timeout.connect(self.listen)
+        # self.timer.timeout.connect(self.listen)
+        # self.timer.start()
 
-    def listen(self):
-        for port in self.port_pool:
-            self.pool(port)
+    # def listen(self):
+    #     for port in self.port_pool:
+    #         self.pool(port)
 
     def bind_port(self, port):
+        port.readyRead.connect(self.pool)
         self.port_pool.append(port)
+        
 
     def update_port(self, ports):
         self.port_pool = ports
@@ -276,7 +279,6 @@ class QSerialPortManger(object):
     def connect(self, port):
         self.serialpool.append(port)
         self.serialpool[-1].moveToThread(self.worker)
-        self.serialpoll[-1].readReady.connect(self.read)
         self.subscriber.bind_port(self.serialpool[-1])
 
     """Bind serial port to patch for us to lookup which patch to update or sending data"""
@@ -365,7 +367,8 @@ def send_data(serialport, data):
 def read_data(serialport):
     if not serialport.error() in SerialPortError:
         try:
-            return serialport.readLine()
+            data = serialport.readLine()
+            return data
         except:
             warning("Error: Could not read from port")
         finally:

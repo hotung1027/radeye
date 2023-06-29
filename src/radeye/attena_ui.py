@@ -18,7 +18,7 @@ from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
 from PySide6.QtWidgets import (QApplication, QCheckBox, QComboBox, QLabel,
     QSizePolicy, QWidget)
 
-class Ui_AttenaUi(object):
+class Ui_AttenaUi(QWidget):
     def setupUi(self, AttenaUi):
         if not AttenaUi.objectName():
             AttenaUi.setObjectName(u"AttenaUi")

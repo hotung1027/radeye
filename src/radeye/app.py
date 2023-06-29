@@ -2,6 +2,7 @@
 My first application
 """
 import sys
+import os.path
 from typing import Optional
 import time
 import logging
@@ -16,6 +17,9 @@ except ImportError:
 
 from PySide6.QtUiTools import QUiLoader
 
+from PySide6.QtQuick import QSGRendererInterface,QQuickWindow
+QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.OpenGLRhi)
+
 from PySide6.QtWidgets import QApplication, QMainWindow,QGraphicsEllipseItem
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 from PySide6.QtCore import (
@@ -28,6 +32,7 @@ from PySide6.QtCore import (
     QTimer,
     QTimerEvent,
     QEvent,
+    QUrl
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QMouseEvent
@@ -121,8 +126,19 @@ class radeye(QMainWindow):
         self.ui.runButton.clicked.connect(self.RUN)
         self.ui.sizeText.editingFinished.connect(self.client.update_size)
 
+        self.ui.verticalLayout.removeWidget(self.ui.processView)
+        self.ui.verticalLayout.removeWidget(self.ui.dataView)
+        self.ui.processView.hide()
+        self.ui.dataView.hide()
         self.ui.processView = QWebEngineView(self.ui.RxPanel)
+        self.ui.processView.setObjectName(u"processView")
+        self.ui.verticalLayout.addWidget(self.ui.processView)
+        
         self.ui.dataView = QWebEngineView(self.ui.RxPanel)
+        self.ui.dataView.setObjectName(u"dataView")
+        self.ui.verticalLayout.addWidget(self.ui.dataView)
+        self.ui.dataView.show()
+        self.ui.processView.show()
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.RUN)
@@ -907,32 +923,66 @@ class radeye(QMainWindow):
 
 def plot_waveform(x, y):
     global window, waveform
+    unit = {
+        "G": 1e9,
+        "M": 1e6,
+        "k": 1e3,
+        "u": 1e-6,
+        "n": 1e-9,
+    }
+    convertUnit = lambda text: int(text[0:-1]) * unit.get(text[-1], 1)
+    fs = convertUnit(window.ui.sampleRateText.text())
+    bandwidth = convertUnit(window.ui.bandWidthText.text())
+    pulsewidth = convertUnit(window.ui.pulseWidthText.text())
+    data_layout = plo.Layout(xaxis={'title':{'text':"time(ns)"}}, yaxis={'title':{'text':"Voltage (V)"}}, title="Waveform",
+    showlegend = False)
+    process_layout = plo.Layout(xaxis={'title':{'text':"Frequency (Hz)"}}, yaxis={'title':{'text':"Power (dB)"}}, title="Power Spectrum",showlegend=False)
+    plotly_js_path = os.path.abspath(os.path.join(os.path.dirname(__file__), 'plotly-latest.min.js'))
+    plotly_js = QUrl.fromLocalFile(plotly_js_path).toString()
 
-    # df = pd.DataFrame(dict(x=x, y=y))
-    # fig = px.line(df, x="sample", y="normalized Amplitude")
+    plot = lambda x,y,layout :  plo.Figure(data=px.line(x=x, y=y), layout=layout)
     try:
-        window.ui.dataView.plotItem.plot(x, y, clear=True)
+
+        x = np.array(x) / fs
+        df = pd.DataFrame(data={'time (ns)':x, 'Voltage (V)':y})
+        fig = px.line(df,x="time (ns)",y="Voltage (V)",title="Waveform")
+        raw_html = '<html><head><meta charset="utf-8" />'
+
+        raw_html += '<body>'
+        raw_html += '<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: \'local\'};</script>'
+        raw_html += '<script charset=\"utf-8\" src="{}"></script>'.format(plotly_js_path)
+        raw_html += pyo.plot(fig,include_plotlyjs='cdn', output_type='div')
+        raw_html += '</body></html>'
+        
+
+        window.ui.dataView.setHtml(raw_html)
+        window.ui.dataView.show()
+
+        # window.ui.dataView.plotItem.plot(x, y, clear=True)
         y_fft = np.fft.rfft(y)
-        unit = {
-            "G": 1e9,
-            "M": 1e6,
-            "k": 1e3,
-            "u": 1e-6,
-            "n": 1e-9,
-        }
-        convertUnit = lambda text: int(text[0:-1]) * unit.get(text[-1], 1)
-        fs = convertUnit(window.ui.sampleRateText.text())
-        bandwidth = convertUnit(window.ui.bandWidthText.text())
-        pulsewidth = convertUnit(window.ui.pulseWidthText.text())
+
+
 
         L = len(y_fft)
         f = fs * np.arange(0, L) / L / 2
         p2 = np.abs(y_fft / L)
-        range = speed_of_light * pulsewidth / (2 * bandwidth) * f
-        db = 10 * np.log10(p2)
-        window.ui.processView.plotItem.plot(range, db, clear=True)
-        window.ui.processView.plotItem.setLabel("left", "Amplitude (dB)")
-        window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
+        r = speed_of_light * pulsewidth / (2 * bandwidth) * f
+        db = 20 * np.log10(p2)
+        
+        df = pd.DataFrame(data={'Range (m)':r, 'Power (dB)':db})
+        fig = px.line(df,x="Range (m)",y="Power (dB)",title="Range Profile")
+        raw_html = '<html><head><meta charset="utf-8" />'
+        raw_html += '<body>'
+        raw_html += '<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: \'local\'};</script>'
+        raw_html += '<script charset=\"utf-8\" src="{}"></script>'.format(plotly_js_path)
+        raw_html += pyo.plot(fig,include_plotlyjs='cdn', output_type='div')
+        raw_html += '</body></html>'
+        
+        window.ui.processView.setHtml(raw_html)
+        window.ui.processView.show()
+        # window.ui.processView.plotItem.plot(range, db, clear=True)
+        # window.ui.processView.plotItem.setLabel("left", "Amplitude (dB)")
+        # window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
     finally:
         waveform.flush()
 
