@@ -105,9 +105,10 @@ class radeye(QMainWindow):
         self.serial_manager = QSerialPortManger(["phase", "gain"], REGISTER_MAP)
         self.comports = {}
         self.ui.findComPortButton.clicked.connect(self.update_comport_list)
-        self.ui.comPortSelect.activated.connect(self.bind_comport_to_patch)
+        self.ui.comPortSelect.currentIndexChanged.connect(self.bind_comport_to_patch)
         self.patch_bind_address = {}
         self.ui.led.clicked.connect(lambda: self.lightup_patch(self.activatedPatch))
+
 
         """Data Acquisition panel"""
 
@@ -156,8 +157,9 @@ class radeye(QMainWindow):
         self.calpattern_thread = QThread()
         self.calpattern.patternReady.connect(self.update_figure)
         self.calpattern.configUpdated.connect(self.calpattern.cal_pattern)
-
+        self.calpattern.windowWeightChanged.connect(self.update_gain)
         self.ui.polardirection.addItems(["clockwise", "anticlockwise"])
+        self.ui.polardirection.currentIndexChanged.connect(self.change_polarization)
 
         # self.calpattern.configUpdated.connect(self.calpattern_thread.start())
 
@@ -781,7 +783,6 @@ class radeye(QMainWindow):
     def update_phase(self):
         theta = self.ui.dsb_angleaz.value()
         phi = self.ui.dsb_angleel.value()
-        print(theta, phi)
         phase = calculate_phaseshift(self.array_config, theta, phi)
         """
         1 Patches has 4x4 Antennas
@@ -793,7 +794,16 @@ class radeye(QMainWindow):
         for patch, channel in zip(self.patches, channels):
             patch.set_phases(channel)
 
-    def update_antenna(self, antennas: list) -> None:
+
+    def update_gain(self,weight):
+        gains = weight
+        channels = split_channels(gains, 4, 4)
+
+        for patch, channel in zip(self.patches, channels):
+            patch.set_gains(channel)
+        
+    
+    def change_display_antenna(self, antennas: list) -> None:
         if self.ui.channelGrid.count() > 0:
             self.remove_antenna()
             self.antennas = []
@@ -831,7 +841,11 @@ class radeye(QMainWindow):
                     "}\n"
                     ""
                 )
-            self.patches[i].changedActivatedElement.connect(self.update_antenna)
+                
+            """ assign patch interaction"""
+            self.patches[i].antennaConfigChanged.connect(lambda data: self.adjust_antenna(self.patches[i],data))
+            self.patches[i].changedActivatedElement.connect(self.change_display_antenna)
+            self.patches[i].changedActivatedElement.connect(self.change_display_comport)
             # TODO : clicked patch
             self.patches[i].clicked.connect(self.assign_patch)
             # TODO: reassign ComPorts
@@ -855,12 +869,15 @@ class radeye(QMainWindow):
         size_x = int(self.array_config["size_x"] / 4)
         size_y = int(self.array_config["size_y"] / 4)
         numAntennas = size_x * size_y
-
         # get the number of rows and columns
         self.remove_patch(len(self.patches))
         self.add_patch(numAntennas)
 
     """ComPort Panel Configuration"""
+    
+    def change_display_comport(self) -> None:
+        comport =  self.patch_bind_address.get(self.activatedPatch)
+        self.ui.comPortSelect.setCurrentText(comport.portName())
 
     def update_comport_list(self) -> None:
         self.ui.comPortSelect.clear()
@@ -877,11 +894,36 @@ class radeye(QMainWindow):
         if comport is not None:
             self.patch_bind_address.update({self.activatedPatch: comport})
             # add comport to serialport manager
+            self.serial_manager.bind_serial(comport, self.activatedPatch)
 
+  
         else:
             debug("Comport might have been lost due to connection or update")
             return
+        
+        
+    def adjust_antenna(self, patch,antenna_config):
+        """Adjust antenna"""
 
+        comport = self.patch_bind_address.get(patch)
+        if comport is None:
+            return
+        else:
+            self.serial_manager.write(comport, antenna_config)
+        
+    
+    """Mass update"""
+    def send_changes(self):
+        #TODO update array config  and write through serial manager
+        
+        pass
+        
+    """On value changed basis"""
+    # after antena config is changed, find it's patch and update it, with the new value
+
+
+        
+    
     def change_polarization(self, direction) -> None:
         direction = self.ui.polardirection.currentText
 
@@ -889,7 +931,7 @@ class radeye(QMainWindow):
             direction, debug("Invalid Polarization Direction")
         )
 
-        msg = dict({"polar": polarization})
+        msg = dict({"polar": 1,"channel":polarization})
 
         for port in self.comports:
             self.serial_manager.write(port, msg)

@@ -10,6 +10,7 @@ class CalPattern(QObject):
     patternReady = Signal(np.ndarray, np.ndarray,
                           np.ndarray, np.ndarray, np.ndarray, np.ndarray)
     configUpdated = Signal()
+    windowWeightChanged = Signal(np.ndarray)
     new_data = False
 
     def __init__(self):
@@ -86,7 +87,7 @@ class CalPattern(QObject):
             y = self.rect_array.y
     
             weight = AF_data['weight'].ravel()
-
+            self.windowWeightChanged.emit(AF_data['window'])
             self.patternReady.emit(
                 AF_data['azimuth'], AF_data['elevation'], AF, x, y, weight)
 
@@ -120,7 +121,7 @@ def calculate_phaseshift(params, theta, phi):
 
     phaseshift = phaseshift - np.min(phaseshift)
 
-    print(phaseshift)
+    # print(phaseshift)
     return phaseshift
 
 def convert_phase(phase,offset):

@@ -285,7 +285,9 @@ class QSerialPortManger(object):
 
     def bind(self, port: QSerialPort, patch: object):
         # use port as key to lookup patch, as port are persistent
+        self.connect(port)
         self.port_table.update({port: patch})
+        
 
     # read bytes data from serial port and decode into dictionary
     def read(self, port, byte_data: bytearray) -> dict:

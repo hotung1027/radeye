@@ -7,6 +7,7 @@ from radeye.ulti_fn import s16i11, vectorize
 from radeye.ui import REDLIGHT, YELLOWLIGHT, GREENLIGHT
 
 import math
+import itertools
 from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
 from radeye.ulti_fn import counterclockwise_phasearray_index,split_channels,findClosetFromItems
@@ -137,6 +138,7 @@ class Attena(Ui_AttenaUi):
     antennaConfigChanged = Signal(dict)
     def __init__(self, parent: QObject | None = ...) -> None:
         super(Attena, self).__init__()
+        self.parent = parent
         self.gain = 0
         self.phase = 0
         self.offset = 0
@@ -165,11 +167,21 @@ class Attena(Ui_AttenaUi):
         self.exgainComboBox.currentTextChanged.connect(lambda text: self.update_exgain(float(text)))
         self.offsetComboBox.currentTextChanged.connect(lambda text: self.update_offset(float(text)))
         self.phaseComboBox.currentTextChanged.connect(lambda text: self.update_phase(float(text)))
+        self.attenCheckBox.stateChanged.connect(lambda state: self.update_attenuation(state))
                 
         self.gain = self.config.get('gain',self.gainComboBox.itemData(self.gainComboBox.currentIndex()))
         self.exgain = self.config.get('exgain',self.exgainComboBox.itemData(self.exgainComboBox.currentIndex()))
         self.phase = self.config.get('phase',self.phaseComboBox.itemData(self.phaseComboBox.currentIndex()))
         self.offset = self.config.get('offset',self.offsetComboBox.itemData(self.offsetComboBox.currentIndex()))
+        self.config = dict(zip(['phase','offset','gain','exgain','atten'],[self.phase,self.offset,self.gain,self.exgain,self.attenuation]))
+        
+    def set_parent(self,parent):
+        self.parent = parent
+        
+    def update_attenuation(self, state:bool)->None:
+        self.attenuation = state
+        self.config['atten'] = self.attenuation
+        self.antennaConfigChanged.emit(self.config)
         
     
     def update_gain(self, gain:float)->None:
@@ -191,6 +203,10 @@ class Attena(Ui_AttenaUi):
         self.offset = offset
         self.config['offset'] = self.offset
         self.antennaConfigChanged.emit(self.config)
+        
+    def actual_phase(self)->float:
+        real_phase = convert_phase(self.config.get('phase') , self.config.get('offset'))
+        return real_phase,findClosetFromItems(ANGLE,real_phase)
 
 
 # 2x2 Channel as single basic unit patch of Antenna
@@ -202,6 +218,7 @@ class Attena(Ui_AttenaUi):
         -----------------------
     """
 class Patch(Ui_PatchUi):
+    antennaConfigChanged = Signal(dict)
     patchConfigChanged = Signal(list) # list[dict]
     changedActivatedElement = Signal(list)
     clicked = Signal(object)
@@ -221,28 +238,41 @@ class Patch(Ui_PatchUi):
                 self.array[key][i].setupUi(self.array[key][i])
                 self.array[key][i].setObjectName("attena {} CH{}".format(key,i+1))
                 self.array[key][i].channelLabel.setText("Ch{}".format(i+1))
+                self.array[key][i].set_parent(self)
+                self.array[key][i].antennaConfigChanged.connect(lambda config:self.update_config(key,i,config))
 
     def setup(self,*args):
         for i in range(4):
             self.array[i].setup(args[i])
+            
+            
+    def update_config(self,key:str,index:int,config:dict)->None:
+        self.antennaConfigChanged.emit(self.get_antenna_config(key,index,config))
 
 
+    def get_antenna_config(self,key:str,index:int,config:dict)->None:
+        phase = self.array[key][index].actual_phase()
+        address = key
+        channel = index
+        gain = config['gain']
+        exgain = config['exgain']
+        atten = config['atten']
+        anttena_config = {
+            'address' : address,
+            'channel' : channel,
+            'phase' : phase,
+            'gain' : gain,
+            'atten' : atten,
+            'exgain' : exgain
+        }
+        return anttena_config
+        
+ 
     
     def get_patch_config(self):
-        config = {}
-        antennas = self.get_attenas()
-        get_config = lambda keywords: [x.config.get(keywords,0) for x in antennas] 
-        phases = get_config('phase')
-        offsets = get_config('offset')
-        gains = get_config('gain')
-        exgains = get_config('exgain')
-        config.update({
-            'phase' : phases,
-            'offset' : offsets,
-            'gain' : gains,
-            'exgain' : exgains
-        })
-        return config
+        patch_config = [self.get_antenna_config(key,index,self.array[key][index].config) 
+        for key,index in itertools.product(self.keys, range(4))]
+        return patch_config
     
     
     """
@@ -275,8 +305,19 @@ class Patch(Ui_PatchUi):
                 phase = convert_phase(phase,0)
                 antenna.update_phase(phase)
                 antenna.phaseComboBox.setCurrentIndex(findClosetFromItems(ANGLE,phase))
+        # self.patchConfigChanged.emit(self.get_patch_config())
+    def set_gains(self,gains):
+        weight = self.parse(gains)
+        for key,gains in zip(self.keys,weight):
+            if any(key in word  for word in ["ll", "lr"]):
+                antennas = counterclockwise_phasearray_index(self.array[key], 2)
+            else:
+                antennas = counterclockwise_phasearray_index(self.array[key], 0)
 
-
+            for antenna,gain in zip(antennas,gains.flatten()):
+                print(gain)
+                antenna.update_gain(gain)
+                antenna.gainComboBox.setCurrentIndex(findClosetFromItems(GAIN,gain))
     # parsing phrase into patch configuration with offset
     def parse(self,phase):
         """
@@ -300,13 +341,11 @@ class MousePressEventFilter(QObject):
 
             p = event.position()
             (x,y)=p.x(),p.y()
-            print(x,y)
             geom = object.property('geometry')
             (w,h) = np.array([geom.width(),geom.height()])/4
             xv,yv = np.meshgrid([1,3],[1,3])
             ps = np.dstack((xv.flatten(),yv.flatten())) 
             dist = np.sqrt(np.sum(np.power([x,y]-ps * [w,h],2) ,axis=2))
-            print(object.objectName(),ps[dist < (w+h)/4].squeeze())
             antenna = object.array
             closest_point = ps[dist < np.linalg.norm([w,h],2)/4].squeeze()
             for idx,key in zip(object.index,object.keys):

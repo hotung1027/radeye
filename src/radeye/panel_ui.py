@@ -977,6 +977,13 @@ class Ui_MainWindow(object):
         self.channelGroupBox.setObjectName(u"channelGroupBox")
         self.channelConfGrid = QGridLayout(self.channelGroupBox)
         self.channelConfGrid.setObjectName(u"channelConfGrid")
+        self.groupBox_6 = QGroupBox(self.channelGroupBox)
+        self.groupBox_6.setObjectName(u"groupBox_6")
+        self.channelGrid = QGridLayout(self.groupBox_6)
+        self.channelGrid.setObjectName(u"channelGrid")
+
+        self.channelConfGrid.addWidget(self.groupBox_6, 1, 0, 1, 1)
+
         self.groupBox_5 = QGroupBox(self.channelGroupBox)
         self.groupBox_5.setObjectName(u"groupBox_5")
         self.verticalLayout_9 = QVBoxLayout(self.groupBox_5)
@@ -998,13 +1005,6 @@ class Ui_MainWindow(object):
 
 
         self.channelConfGrid.addWidget(self.groupBox_5, 0, 0, 1, 1)
-
-        self.groupBox_6 = QGroupBox(self.channelGroupBox)
-        self.groupBox_6.setObjectName(u"groupBox_6")
-        self.channelGrid = QGridLayout(self.groupBox_6)
-        self.channelGrid.setObjectName(u"channelGrid")
-
-        self.channelConfGrid.addWidget(self.groupBox_6, 1, 0, 1, 1)
 
         self.channelConfGrid.setRowStretch(1, 1)
 
@@ -1087,10 +1087,10 @@ class Ui_MainWindow(object):
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"Visualize", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.PhaseArray), QCoreApplication.translate("MainWindow", u"PhaseArray", None))
         self.channelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Channel Config", None))
+        self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"ChannelPanel", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("MainWindow", u"Comm Port", None))
         self.findComPortButton.setText(QCoreApplication.translate("MainWindow", u"find port", None))
         self.led.setText(QCoreApplication.translate("MainWindow", u"led", None))
-        self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"ChannelPanel", None))
         self.panelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"PhaseArrayPanel", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.BeamformingConfig), QCoreApplication.translate("MainWindow", u"BeamformingConfig", None))
     # retranslateUi

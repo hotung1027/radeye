@@ -403,4 +403,5 @@ class AntennaArray(UniformAntennaArray):
             "weight": weight.ravel(order="F"),
             "azimuth": azimuth,
             "elevation": elevation,
+            'window':window
         }

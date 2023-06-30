@@ -36,7 +36,7 @@
        <enum>Qt::LeftToRight</enum>
       </property>
       <property name="currentIndex">
-       <number>2</number>
+       <number>0</number>
       </property>
       <widget class="QWidget" name="RxPanel">
        <attribute name="title">
@@ -107,7 +107,7 @@
                      <string/>
                     </property>
                     <property name="pixmap">
-                     <pixmap>:/resources/icons/trafficlight/redlight.png</pixmap>
+                     <pixmap resource="trafficlight.qrc">:/resources/icons/trafficlight/redlight.png</pixmap>
                     </property>
                     <property name="scaledContents">
                      <bool>true</bool>
@@ -1674,6 +1674,14 @@
            <string>Channel Config</string>
           </property>
           <layout class="QGridLayout" name="channelConfGrid" rowstretch="0,1">
+           <item row="1" column="0">
+            <widget class="QGroupBox" name="groupBox_6">
+             <property name="title">
+              <string>ChannelPanel</string>
+             </property>
+             <layout class="QGridLayout" name="channelGrid"/>
+            </widget>
+           </item>
            <item row="0" column="0">
             <widget class="QGroupBox" name="groupBox_5">
              <property name="title">
@@ -1698,14 +1706,6 @@
                </widget>
               </item>
              </layout>
-            </widget>
-           </item>
-           <item row="1" column="0">
-            <widget class="QGroupBox" name="groupBox_6">
-             <property name="title">
-              <string>ChannelPanel</string>
-             </property>
-             <layout class="QGridLayout" name="channelGrid"/>
             </widget>
            </item>
           </layout>
