@@ -30,7 +30,8 @@ requires = [
     "plotly",
     "pandas",
     "scipy",
-    "matplotlib"
+    "matplotlib",
+    "tomlkit"
 ]
 test_requires = [
     "pytest",

@@ -9,7 +9,7 @@ def square_win( array_size, *args, **kwargs):
 def chebyshev_win( array_size, sll, *args, **kwargs):
     return signal.windows.chebwin(array_size, at=-sll)
 
-def taylor_win( array_size, sll, nbar,*args,**kawrgs):
+def taylor_win( array_size, sll, nbar, *args, **kawrgs):
     """
     Return the Taylor window.
     The Taylor window allows for a selectable sidelobe suppression with a
@@ -41,7 +41,10 @@ def taylor_win( array_size, sll, nbar,*args,**kawrgs):
                 Aperture Radar: Signal Processing Algorithms" Pages 512-513,
                 July 1995.
     """
-    return signal.windows.taylor(array_size, nbar, sll,sym=True)
+    # Original text uses a negative sidelobe level parameter and then negates
+    # it in the calculation of B. To keep consistent with other methods we
+    # assume the sidelobe level parameter to be positive.
+    return signal.windows.taylor(array_size, nbar, -sll,sym=True)
 
 def hamming_win(array_size, *args, **kwargs):
     return signal.windows.hamming(array_size)

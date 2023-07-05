@@ -11,16 +11,17 @@
 from PySide6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale,
     QMetaObject, QObject, QPoint, QRect,
     QSize, QTime, QUrl, Qt)
-from PySide6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,
-    QFont, QFontDatabase, QGradient, QIcon,
-    QImage, QKeySequence, QLinearGradient, QPainter,
-    QPalette, QPixmap, QRadialGradient, QTransform)
+from PySide6.QtGui import (QAction, QBrush, QColor, QConicalGradient,
+    QCursor, QFont, QFontDatabase, QGradient,
+    QIcon, QImage, QKeySequence, QLinearGradient,
+    QPainter, QPalette, QPixmap, QRadialGradient,
+    QTransform)
 from PySide6.QtWidgets import (QApplication, QButtonGroup, QComboBox, QDoubleSpinBox,
     QFrame, QGridLayout, QGroupBox, QHBoxLayout,
-    QLabel, QLineEdit, QMainWindow, QMenuBar,
-    QPushButton, QRadioButton, QSizePolicy, QSlider,
-    QSpacerItem, QSpinBox, QStatusBar, QTabWidget,
-    QVBoxLayout, QWidget)
+    QLabel, QLineEdit, QMainWindow, QMenu,
+    QMenuBar, QPushButton, QRadioButton, QSizePolicy,
+    QSlider, QSpacerItem, QSpinBox, QStatusBar,
+    QTabWidget, QVBoxLayout, QWidget)
 
 from pyqtgraph import PlotWidget
 import radeye.trafficlight_rc
@@ -36,6 +37,14 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
         MainWindow.setSizePolicy(sizePolicy)
+        self.actionSave = QAction(MainWindow)
+        self.actionSave.setObjectName(u"actionSave")
+        self.actionExport = QAction(MainWindow)
+        self.actionExport.setObjectName(u"actionExport")
+        self.actionImport = QAction(MainWindow)
+        self.actionImport.setObjectName(u"actionImport")
+        self.actionDocument = QAction(MainWindow)
+        self.actionDocument.setObjectName(u"actionDocument")
         self.centralWidget = QWidget(MainWindow)
         self.centralWidget.setObjectName(u"centralWidget")
         self.centralWidget.setEnabled(True)
@@ -381,7 +390,7 @@ class Ui_MainWindow(object):
         self.sb_sizex.setMinimumSize(QSize(0, 20))
         self.sb_sizex.setMinimum(1)
         self.sb_sizex.setMaximum(1024)
-        self.sb_sizex.setValue(64)
+        self.sb_sizex.setValue(8)
 
         self.horizontalLayout_13.addWidget(self.sb_sizex)
 
@@ -406,6 +415,7 @@ class Ui_MainWindow(object):
         self.dsb_spacingx.setMinimum(0.001000000000000)
         self.dsb_spacingx.setMaximum(10.000000000000000)
         self.dsb_spacingx.setSingleStep(0.001000000000000)
+        self.dsb_spacingx.setValue(0.500000000000000)
 
         self.horizontalLayout_14.addWidget(self.dsb_spacingx)
 
@@ -537,7 +547,7 @@ class Ui_MainWindow(object):
         self.sb_sizey.setMinimumSize(QSize(0, 20))
         self.sb_sizey.setMinimum(1)
         self.sb_sizey.setMaximum(1024)
-        self.sb_sizey.setValue(64)
+        self.sb_sizey.setValue(8)
 
         self.horizontalLayout_16.addWidget(self.sb_sizey)
 
@@ -562,7 +572,7 @@ class Ui_MainWindow(object):
         self.dsb_spacingy.setMinimum(0.001000000000000)
         self.dsb_spacingy.setMaximum(10.000000000000000)
         self.dsb_spacingy.setSingleStep(0.001000000000000)
-        self.dsb_spacingy.setValue(0.001000000000000)
+        self.dsb_spacingy.setValue(0.500000000000000)
 
         self.horizontalLayout_17.addWidget(self.dsb_spacingy)
 
@@ -1003,6 +1013,11 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_9.addWidget(self.led)
 
+        self.confirmButton = QPushButton(self.groupBox_5)
+        self.confirmButton.setObjectName(u"confirmButton")
+
+        self.verticalLayout_9.addWidget(self.confirmButton)
+
 
         self.channelConfGrid.addWidget(self.groupBox_5, 0, 0, 1, 1)
 
@@ -1020,16 +1035,37 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3.setStretch(1, 1)
         self.tabWidget.addTab(self.BeamformingConfig, "")
 
-        self.gridLayout_6.addWidget(self.tabWidget, 0, 0, 1, 1)
+        self.gridLayout_6.addWidget(self.tabWidget, 2, 0, 1, 1)
+
+        self.menuFrame = QFrame(self.centralWidget)
+        self.menuFrame.setObjectName(u"menuFrame")
+        self.menuFrame.setFrameShape(QFrame.StyledPanel)
+        self.menuFrame.setFrameShadow(QFrame.Raised)
+        self.horizontalLayout_33 = QHBoxLayout(self.menuFrame)
+        self.horizontalLayout_33.setObjectName(u"horizontalLayout_33")
+        self.horizontalLayout_33.setContentsMargins(0, 0, 0, 0)
+
+        self.gridLayout_6.addWidget(self.menuFrame, 1, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralWidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
         self.menubar.setGeometry(QRect(0, 0, 1087, 22))
+        self.menuConfig = QMenu(self.menubar)
+        self.menuConfig.setObjectName(u"menuConfig")
+        self.menuHelp = QMenu(self.menubar)
+        self.menuHelp.setObjectName(u"menuHelp")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QStatusBar(MainWindow)
         self.statusbar.setObjectName(u"statusbar")
         MainWindow.setStatusBar(self.statusbar)
+
+        self.menubar.addAction(self.menuConfig.menuAction())
+        self.menubar.addAction(self.menuHelp.menuAction())
+        self.menuConfig.addAction(self.actionSave)
+        self.menuConfig.addAction(self.actionExport)
+        self.menuConfig.addAction(self.actionImport)
+        self.menuHelp.addAction(self.actionDocument)
 
         self.retranslateUi(MainWindow)
 
@@ -1041,6 +1077,10 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
+        self.actionSave.setText(QCoreApplication.translate("MainWindow", u"Save", None))
+        self.actionExport.setText(QCoreApplication.translate("MainWindow", u"Export", None))
+        self.actionImport.setText(QCoreApplication.translate("MainWindow", u"Import", None))
+        self.actionDocument.setText(QCoreApplication.translate("MainWindow", u"Documentation", None))
         self.trafficlight.setText("")
         self.groupBox.setTitle(QCoreApplication.translate("MainWindow", u"Connection", None))
         self.addressLabel.setText(QCoreApplication.translate("MainWindow", u"IP Address:", None))
@@ -1087,11 +1127,14 @@ class Ui_MainWindow(object):
         self.groupBox_4.setTitle(QCoreApplication.translate("MainWindow", u"Visualize", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.PhaseArray), QCoreApplication.translate("MainWindow", u"PhaseArray", None))
         self.channelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"Channel Config", None))
-        self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"ChannelPanel", None))
+        self.groupBox_6.setTitle(QCoreApplication.translate("MainWindow", u"Channel Panel", None))
         self.groupBox_5.setTitle(QCoreApplication.translate("MainWindow", u"Comm Port", None))
-        self.findComPortButton.setText(QCoreApplication.translate("MainWindow", u"find port", None))
-        self.led.setText(QCoreApplication.translate("MainWindow", u"led", None))
+        self.findComPortButton.setText(QCoreApplication.translate("MainWindow", u"Find Port", None))
+        self.led.setText(QCoreApplication.translate("MainWindow", u"LED", None))
+        self.confirmButton.setText(QCoreApplication.translate("MainWindow", u"Confirm", None))
         self.panelGroupBox.setTitle(QCoreApplication.translate("MainWindow", u"PhaseArrayPanel", None))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.BeamformingConfig), QCoreApplication.translate("MainWindow", u"BeamformingConfig", None))
+        self.menuConfig.setTitle(QCoreApplication.translate("MainWindow", u"File", None))
+        self.menuHelp.setTitle(QCoreApplication.translate("MainWindow", u"Help", None))
     # retranslateUi
 

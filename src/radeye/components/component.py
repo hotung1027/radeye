@@ -1,5 +1,6 @@
 from typing import Optional
 import numpy as np
+from PySide6.QtCore import Qt
 from PySide6.QtCore import QObject, Signal, Slot,QEvent
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 from PySide6.QtGui import QIcon,QPixmap
@@ -10,7 +11,7 @@ import math
 import itertools
 from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
-from radeye.ulti_fn import counterclockwise_phasearray_index,split_channels,findClosetFromItems
+from radeye.ulti_fn import counterclockwise_phasearray_index,split_channels,findClosetFromItems,bind,response,call,map
 from radeye.phasearray.antenna.pattern import convert_phase
 
 
@@ -143,11 +144,7 @@ class Attena(Ui_AttenaUi):
         self.phase = 0
         self.offset = 0
         self.exgain = 0
-        self.channel = 0
-        self.mode = 0
-        self.attenuation = 0
-        self.activated = 0
-        self.deactivated = 0
+        self.atten = 0
         self.config = dict()
 
 
@@ -155,31 +152,102 @@ class Attena(Ui_AttenaUi):
         super(Attena,self).setupUi(self)
         self.gainComboBox.addItems([str(i) for i in GAIN])
         self.exgainComboBox.addItems([str(i) for i in GAIN])
+        
         self.offsetComboBox.addItems([str(i) for i in ANGLE])
         self.phaseComboBox.addItems([str(i) for i in ANGLE])   
+        
         zeroIdx = findClosetFromItems(ANGLE,0)
+        
         self.phaseComboBox.setCurrentIndex(zeroIdx)
         self.offsetComboBox.setCurrentIndex(zeroIdx)
         self.gainComboBox.setCurrentIndex(0)
         self.exgainComboBox.setCurrentIndex(0)
 
-        self.gainComboBox.currentTextChanged.connect(lambda text: self.update_gain(float(text)))
-        self.exgainComboBox.currentTextChanged.connect(lambda text: self.update_exgain(float(text)))
-        self.offsetComboBox.currentTextChanged.connect(lambda text: self.update_offset(float(text)))
-        self.phaseComboBox.currentTextChanged.connect(lambda text: self.update_phase(float(text)))
-        self.attenCheckBox.stateChanged.connect(lambda state: self.update_attenuation(state))
+        checkState = lambda st: 1 if Qt.CheckState.Checked == st else 0
+        
+        response = lambda var, signal : getattr(var,signal)
+        # update_variable :: (name , value) -> None
+        # update :: (name , type) -> (fn :: value -> fn(type(value))) -> None
+        # update :: ((name , type) , (fn :: (name,value))) ->  (value -> fn -> name -> type(value))) -> None
+        # call :: (fn :: (name,value)) -> (value -> fn(name,type(value))) -> None
+        update = lambda name,T: call(self.update_variable, name, T)
+        update_float = lambda var: update(var,float)
+        update_state = lambda var: update(var,checkState)
+        
+        self.widgets = [
+            self.phaseComboBox,
+            self.offsetComboBox,
+            self.gainComboBox,
+            self.exgainComboBox,
+            self.attenCheckBox,
+        ]
+        
+        self.widgets_trig_fn = [
+            'currentTextChanged',
+            'currentTextChanged',
+            'currentTextChanged',
+            'currentTextChanged',
+            'stateChanged'
+        ]
+        
+        
+        
+        self.signals = map(lambda pk:response(*pk),zip(self.widgets,self.widgets_trig_fn))
+
+        self.variables = [
+            'phase',
+            'offset',
+            'gain',
+            'exgain',
+            'atten'
+        ]
+        self.binding = dict(zip(self.variables,self.widgets))
+        self.boundary =  {
+            "phase": ANGLE,
+            "offset": ANGLE,
+            "gain": GAIN,
+            "exgain": GAIN
+            }
+        
+        """ bind signals to variable with defined function"""
+        for signal,var in zip(self.signals,self.variables):
+            match var:
+                case 'atten':
+                    signal.connect(update_state(var))
+                case _:
+                    signal.connect(update_float(var))
+        
+        # self.gainComboBox.currentTextChanged.connect(lambda text: self.update_gain(float(text)))
+        # self.exgainComboBox.currentTextChanged.connect(lambda text: self.update_exgain(float(text)))
+        # self.offsetComboBox.currentTextChanged.connect(lambda text: self.update_offset(float(text)))
+        # self.phaseComboBox.currentTextChanged.connect(lambda text: self.update_phase(float(text)))
+        # self.attenCheckBox.stateChanged.connect(lambda state: self.update_attenuation(checkState(state)))
                 
-        self.gain = self.config.get('gain',self.gainComboBox.itemData(self.gainComboBox.currentIndex()))
-        self.exgain = self.config.get('exgain',self.exgainComboBox.itemData(self.exgainComboBox.currentIndex()))
-        self.phase = self.config.get('phase',self.phaseComboBox.itemData(self.phaseComboBox.currentIndex()))
-        self.offset = self.config.get('offset',self.offsetComboBox.itemData(self.offsetComboBox.currentIndex()))
-        self.config = dict(zip(['phase','offset','gain','exgain','atten'],[self.phase,self.offset,self.gain,self.exgain,self.attenuation]))
+        self.gain = self.config.get('gain',float(self.gainComboBox.currentText()))
+        self.exgain = self.config.get('exgain',float(self.exgainComboBox.currentText()))
+        self.phase = self.config.get('phase',float(self.phaseComboBox.currentText()))
+        self.offset = self.config.get('offset',float(self.offsetComboBox.currentText()))
+        self.atten = self.config.get('atten',self.attenCheckBox.isChecked())
+
+        
+        self.config = dict(zip(['phase','offset','gain','exgain','atten'],[self.phase,self.offset,self.gain,self.exgain,self.atten]))
+
         
     def set_parent(self,parent):
         self.parent = parent
+    
+    # update_variable :: (name:str, value:any) -> None
+    def update_variable(self, name:str, value:any)->None:
+        setattr(self,name, value)
+        self.config[name]  = getattr(self,name)
+        if name == 'atten':
+            self.binding.get(name).setCheckState(Qt.CheckState.Checked if value else Qt.CheckState.Unchecked)
+        else:
+            self.binding.get(name).setCurrentIndex(findClosetFromItems(self.boundary.get(name),value))
+
         
     def update_attenuation(self, state:bool)->None:
-        self.attenuation = state
+        self.atten = state
         self.config['atten'] = self.attenuation
         self.antennaConfigChanged.emit(self.config)
         
@@ -287,38 +355,71 @@ class Patch(Ui_PatchUi):
             yield antennas
         
     
+    def set_attributes(self,name,attributes):
+        attr = self.parse(attributes)
+        widgets = {
+            "phase" : "phaseComboBox",
+            "offset" : "offsetComboBox",
+            "gain" : "gainComboBox",
+            "exgain" : "exgainComboBox",
+        }
+        boundary = {
+            "phase": ANGLE,
+            "offset": ANGLE,
+            "gain": GAIN,
+            "exgain": GAIN
+            }
+        
+        for key,value in zip(self.keys,attr):
+            if any(key in word  for word in ["ll", "lr"]):
+                antennas = counterclockwise_phasearray_index(self.array[key], 2)
+            else:
+                antennas = counterclockwise_phasearray_index(self.array[key], 0)
+
+            for antenna,v in zip(antennas,value.flatten()):
+                if name=="phase":
+                    v = convert_phase(v,0)
+                antenna.update_variable(name,v)
+                getattr(antenna,widgets.get(name)).setCurrentIndex(findClosetFromItems(boundary.get(name),v))
+
     def set_phases(self,phases):
-        """ set phases to antennas
-
-        Args:
-            phases (NDArray): expected the shape to be 4x4 antenna channel
-        """
-        phases = self.parse(phases)
-        for key,phase in zip(self.keys,phases):
-            if any(key in word  for word in ["ll", "lr"]):
-                antennas = counterclockwise_phasearray_index(self.array[key], 2)
-            else:
-                antennas = counterclockwise_phasearray_index(self.array[key], 0)
-
-            for antenna,phase in zip(antennas,phase.flatten()):
-                
-                phase = convert_phase(phase,0)
-                antenna.update_phase(phase)
-                antenna.phaseComboBox.setCurrentIndex(findClosetFromItems(ANGLE,phase))
-        # self.patchConfigChanged.emit(self.get_patch_config())
+        self.set_attributes("phase",phases)
+        
     def set_gains(self,gains):
-        weight = self.parse(gains)
-        for key,gains in zip(self.keys,weight):
-            if any(key in word  for word in ["ll", "lr"]):
-                antennas = counterclockwise_phasearray_index(self.array[key], 2)
-            else:
-                antennas = counterclockwise_phasearray_index(self.array[key], 0)
+        self.set_attributes("gain",gains)
+        
+    # def set_phases(self,phases):
+    #     """ set phases to antennas
 
-            for antenna,gain in zip(antennas,gains.flatten()):
-                print(gain)
-                antenna.update_gain(gain)
-                antenna.gainComboBox.setCurrentIndex(findClosetFromItems(GAIN,gain))
+    #     Args:
+    #         phases (NDArray): expected the shape to be 4x4 antenna channel
+    #     """
+    #     phases = self.parse(phases)
+    #     for key,phase in zip(self.keys,phases):
+    #         if any(key in word  for word in ["ll", "lr"]):
+    #             antennas = counterclockwise_phasearray_index(self.array[key], 2)
+    #         else:
+    #             antennas = counterclockwise_phasearray_index(self.array[key], 0)
+
+    #         for antenna,phase in zip(antennas,phase.flatten()):
+    #             phase = convert_phase(phase,0)
+    #             antenna.update_phase(phase)
+    #             antenna.phaseComboBox.setCurrentIndex(findClosetFromItems(ANGLE,phase))
+                
+    #     # self.patchConfigChanged.emit(self.get_patch_config())
+    # def set_gains(self,gains):
+    #     weight = self.parse(gains)
+    #     for key,gains in zip(self.keys,weight):
+    #         if any(key in word  for word in ["ll", "lr"]):
+    #             antennas = counterclockwise_phasearray_index(self.array[key], 2)
+    #         else:
+    #             antennas = counterclockwise_phasearray_index(self.array[key], 0)
+    #         for antenna,gain in zip(antennas,gains.flatten()):
+    #             antenna.update_gain(gain)
+    #             antenna.gainComboBox.setCurrentIndex(findClosetFromItems(GAIN,gain))
+                
     # parsing phrase into patch configuration with offset
+
     def parse(self,phase):
         """
         Split phases into 4 2x2 patches

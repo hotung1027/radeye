@@ -31,6 +31,10 @@ def apply_map(funcs:list,values:list):
     for fn,value in zip(funcs,values):
         fn(value)
         
+
+def map(fn, values:list):
+    return [fn(value) for value in values]
+        
 def split_channels(array:np.ndarray,size_x:int,size_y:int)->np.ndarray:
     return np.array(
         [
@@ -45,3 +49,14 @@ def findClosetFromItems(items:list[any],point:any)->int:
     norm = np.linalg.norm(diff,axis = 1)
     result = np.argmin(norm)
     return result
+
+
+
+""" bind actions with given arugments and variables """
+# reponse :: (QObject, str) -> (fn ::  var -> fn(var)) -> None
+# equivalent to QObject::signal.connect(fn)
+response = lambda var, signal: lambda fn : getattr(var,signal).conect(fn)
+# bind :: (QObject) , str , fn -> (connect QObject::  var -> fn(var)) -> None
+bind = lambda response, prop, fn: response(fn(prop))
+# call :: ((fn :: (name,value)),name,type) -> (value -> fn(name,type(value))) -> None
+call = lambda fn, name,type : lambda value: fn(name,type(value))

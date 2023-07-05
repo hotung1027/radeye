@@ -6,6 +6,7 @@ import os.path
 from typing import Optional
 import time
 import logging
+import itertools
 from logging import debug, warning, error, info
 
 
@@ -20,7 +21,7 @@ from PySide6.QtUiTools import QUiLoader
 from PySide6.QtQuick import QSGRendererInterface,QQuickWindow
 QQuickWindow.setGraphicsApi(QSGRendererInterface.GraphicsApi.OpenGLRhi)
 
-from PySide6.QtWidgets import QApplication, QMainWindow,QGraphicsEllipseItem
+from PySide6.QtWidgets import QApplication, QMainWindow,QGraphicsEllipseItem,QFileDialog,QMenu,QMenuBar
 from PySide6.QtNetwork import QTcpSocket, QAbstractSocket
 from PySide6.QtCore import (
     QFile,
@@ -32,11 +33,12 @@ from PySide6.QtCore import (
     QTimer,
     QTimerEvent,
     QEvent,
-    QUrl
+    QUrl,
+    
+    
 )
 from PySide6.QtWebEngineWidgets import QWebEngineView
-from PySide6.QtGui import QMouseEvent
-from PySide6.QtGui import QIcon, QPixmap
+from PySide6.QtGui import QIcon, QPixmap,QMouseEvent
 
 # from PySide6.QtOpenGLWidgets import QOpenGLWidget
 import pyqtgraph as pg
@@ -53,7 +55,7 @@ import plotly.graph_objects as plo
 from fxpmath import Fxp
 
 import pandas as pd
-
+import tomlkit
 import numpy as np
 from scipy.constants import speed_of_light
 
@@ -64,7 +66,7 @@ from radeye.attena_ui import Ui_AttenaUi
 from radeye.patch_ui import Ui_PatchUi
 from radeye.panel_ui import Ui_MainWindow
 from radeye.components.component import TcpClient, Data, SocketState, Patch, Attena
-from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map, split_channels
+from radeye.ulti_fn import counterclockwise_phasearray_index, apply_map, split_channels, map, call
 from radeye.ComPort import QSerialPortManger, REGISTER_MAP, POLARIZATION
 import radeye.attena_rc
 
@@ -74,6 +76,8 @@ from radeye.phasearray.antenna.antenna import param_keys
 from radeye.phasearray.antenna.pattern import CalPattern, calculate_phaseshift
 
 waveform = Data()
+
+
 
 
 class radeye(QMainWindow):
@@ -96,7 +100,23 @@ class radeye(QMainWindow):
             "Blackman",
         ]
         self.plot_list = ["3D (Az-El-Amp)", "2D Cartesian", "2D Polar", "Array layout"]
-        self.array_config = dict()
+
+        self.array_config = dict(zip(param_keys,
+                                     [
+                                         self.ui.sb_sizex.value(),
+                                         self.ui.sb_sizey.value(),
+                                         self.ui.dsb_spacingx.value(),
+                                         self.ui.dsb_spacingy.value(),
+                                         self.ui.dsb_angleaz.value(),
+                                         self.ui.dsb_angleel.value(),
+                                         self.ui.cb_windowx.currentText(),
+                                         self.ui.cb_windowy.currentText(),
+                                         self.ui.sb_sidelobex.value(),
+                                         self.ui.sb_sidelobey.value(),
+                                         self.ui.sb_adjsidelobex.value(),
+                                         self.ui.sb_adjsidelobey.value(),
+                                         
+                                     ]))
         self.activatedPatch = None
         # self.array_config = dict(zip(param_keys, np.zeros(len(param_keys))))
         self.fix_azimuth = False
@@ -214,6 +234,82 @@ class radeye(QMainWindow):
         # set default to rectangle window
         self.windowx_config(0)
         self.windowy_config(0)
+        
+   
+        # update_variable :: (name , value) -> None
+        # update :: (name , type) -> (fn :: value -> fn(type(value))) -> None
+        # update :: ((name , type) , (fn :: (name,value))) ->  (value -> fn -> name -> type(value))) -> None
+        # call :: (fn :: (name,value)) -> (value -> fn(name,type(value))) -> None
+        update = lambda name,T: call(self.update_variable, name, T)
+        update_float = lambda var: update(var,float)
+        update_state = lambda st: update(st,lambda x: bool(x))
+        response = lambda var, signal: getattr(var,signal)
+        
+        # self.update_array_config("plot_az", value)
+        
+        """
+        param_keys = [
+            "size_x",
+            "size_y",
+            "spacing_x",
+            "spacing_y",
+            "beam_az",
+            "beam_el",
+            "windowx",
+            "windowy"
+            "sllx",
+            "slly",
+            "nbarx",
+            "nbary",
+            "nfft_az",
+            "nfft_el",
+            "plot_az",
+            "plot_el",
+        ]
+        """
+        
+        # self.array_widget = [
+        #     'sb_sizex',
+        #     'sb_sizey',
+        #     'dsb_spacingx',
+        #     'dsb_spacingy',
+        #     'hs_sidelobex',
+        #     'hs_sidelobey',
+        #     'hs_adjsidelobex',
+        #     'hs_adjsidelobey',
+        #     'sb_sidelobex',
+        #     'sb_sidelobey',
+        #     'sb_adjsidelobex',
+        #     'sb_adjsidelobey',
+        # ]
+        
+        self.pattern_widget = [
+            'hs_sidelobex',
+            'hs_adjsidelobex',
+            'hs_sidelobey',
+            'hs_adjsidelobey',
+            'sb_sidelobex',
+            'sb_adjsidelobex',
+            'sb_sidelobey',
+            'sb_adjsidelobey',
+            'hs_angleaz',
+            'hs_angleel',
+            'dsb_angleaz',
+            'dsb_angleel',
+            'rbsb_azimuth',
+            'rbhs_azimuth',
+            'rbsb_elevation',
+            'rbhs_elevation',
+        ]
+        
+
+
+        
+        
+        self.variables = param_keys
+        
+        
+        
 
         self.ui.cb_windowx.currentIndexChanged.connect(self.windowx_config)
         self.ui.cb_windowy.currentIndexChanged.connect(self.windowy_config)
@@ -221,6 +317,21 @@ class radeye(QMainWindow):
         """
         Value changed in UI
         """
+        self.array_widget = [
+            'sb_sizex',
+            'sb_sizey',
+            'dsb_spacingx',
+            'dsb_spacingy',
+            'dsb_angleaz',
+            'dsb_angleel'
+            'cb_windowx',
+            'cb_windowy',
+            'sb_sidelobex',
+            'sb_sidelobey',
+            'sb_adjsidelobex',
+            'sb_adjsidelobey',       
+            ]
+        
         """ Array Config"""
         self.ui.sb_sizex.valueChanged.connect(self.size_x_changed)
         self.ui.sb_sizey.valueChanged.connect(self.size_y_changed)
@@ -233,18 +344,6 @@ class radeye(QMainWindow):
         self.ui.cb_windowy.currentIndexChanged.connect(self.window_y_changed)
 
         """Side Lobe"""
-        # update side lobe
-        self.ui.hs_sidelobex.valueChanged.connect(self.sidelobex_hs_moved)
-        self.ui.hs_sidelobey.valueChanged.connect(self.sidelobey_hs_moved)
-
-        self.ui.hs_adjsidelobex.valueChanged.connect(self.adjsidelobex_hs_moved)
-        self.ui.hs_adjsidelobey.valueChanged.connect(self.adjsidelobey_hs_moved)
-
-        self.ui.sb_sidelobex.valueChanged.connect(self.sidelobex_changed)
-        self.ui.sb_sidelobey.valueChanged.connect(self.sidelobey_changed)
-
-        self.ui.sb_adjsidelobex.valueChanged.connect(self.adjsidelobex_changed)
-        self.ui.sb_adjsidelobey.valueChanged.connect(self.adjsidelobey_changed)
 
         self.ui.sb_sidelobex.valueChanged.connect(self.sllx_changed)
         self.ui.sb_sidelobey.valueChanged.connect(self.slly_changed)
@@ -256,18 +355,31 @@ class radeye(QMainWindow):
         self.ui.dsb_angleaz.valueChanged.connect(self.beam_az_changed)
         self.ui.dsb_angleel.valueChanged.connect(self.beam_el_changed)
 
-        self.ui.dsb_angleaz.valueChanged.connect(self.az_changed)
-        self.ui.hs_angleaz.valueChanged.connect(self.az_hs_moved)
-        self.ui.dsb_angleel.valueChanged.connect(self.el_changed)
-        self.ui.hs_angleel.valueChanged.connect(self.el_hs_moved)
 
-        self.ui.dsb_angleaz.valueChanged.connect(self.update_phase)
-        self.ui.dsb_angleel.valueChanged.connect(self.update_phase)
+        """ phase angle"""
+        for name in ['dsb_angleaz','dsb_angleel']:
+            getattr(self.ui,name).valueChanged.connect(self.update_phase)
+        """ pattern signals to update after value change"""
+        hs_angle   = ['hs_angleaz','hs_angleel','rbhs_azimuth','rbhs_elevation'] # * 10
+        dsb_angle  = ['dsb_angleaz','dsb_angleel','rbsb_azimuth','rbsb_elevation'] # /10
+        hs_sidelobe= ['hs_sidelobex','hs_sidelobey','hs_adjsidelobex','hs_adjsidelobey']
+        sb_sidelobe= ['sb_sidelobex','sb_sidelobey','sb_adjsidelobex','sb_adjsidelobey']
+        
+        change_value = lambda name, fn: call(self.update_uipattern,name,fn)
+        mult_value = lambda name :change_value(name ,lambda x: x*10)
+        div_value = lambda name :change_value(name ,lambda x: x/10)
+        same_value = lambda name : change_value(name,lambda x: x)
+        
+        for (hs,dsb) in zip(hs_angle,dsb_angle):
+            getattr(self.ui,hs).valueChanged.connect(div_value(dsb))
+            getattr(self.ui,dsb).valueChanged.connect(mult_value(hs))
+            
+        for (hs,sb) in zip(hs_sidelobe,sb_sidelobe):
+            getattr(self.ui,hs).valueChanged.connect(same_value(sb))
+            getattr(self.ui,sb).valueChanged.connect(same_value(hs))    
 
-        self.ui.rbsb_azimuth.valueChanged.connect(self.fix_az_changed)
-        self.ui.rbhs_azimuth.valueChanged.connect(self.fix_az_hs_moved)
-        self.ui.rbsb_elevation.valueChanged.connect(self.fix_el_changed)
-        self.ui.rbhs_elevation.valueChanged.connect(self.fix_el_hs_moved)
+
+
 
         """Plot"""
         self.ui.cb_plottype.addItems(self.plot_list)
@@ -290,7 +402,12 @@ class radeye(QMainWindow):
         self.ui.label_polarMinAmp.setVisible(False)
         self.ui.spinBox_polarMinAmp.setVisible(False)
         self.ui.horizontalSlider_polarMinAmp.setVisible(False)
+        
+        
 
+
+        self.ui.actionExport.triggered.connect(self.export_phasearray_config)
+        self.ui.actionImport.triggered.connect(self.import_phasearray_config)
         # self.ui.actionExport_array_config.triggered.connect(
         #     self.export_array_config)
         # self.ui.actionExport_pattern_data.triggered.connect(
@@ -337,7 +454,7 @@ class radeye(QMainWindow):
         self.update_pattern()
 
     # dispatch window config function
-    def windowx_config(self, window_idx: int):
+    def  windowx_config(self, window_idx: int):
         self.window_config("x", window_idx)
 
     def windowy_config(self, window_idx: int):
@@ -402,69 +519,14 @@ class radeye(QMainWindow):
     def update_pattern(self) -> None:
         self.calpattern.update_config(self.array_config)
 
-    def sidelobex_changed(self, value):
-        self.ui.hs_sidelobex.setValue(value)
-        self.update_pattern()
 
-    def sidelobex_hs_moved(self, value):
-        self.ui.sb_sidelobex.setValue(value)
+    def update_uipattern(self,attr,value):
+        widget = getattr(self.ui,attr)
+        widget.setValue(value)
         self.update_pattern()
+    
 
-    def sidelobey_changed(self, value):
-        self.ui.hs_sidelobey.setValue(value)
-        self.update_pattern()
 
-    def sidelobey_hs_moved(self, value):
-        self.ui.sb_sidelobey.setValue(value)
-        self.update_pattern()
-
-    def adjsidelobex_changed(self, value):
-        self.ui.hs_adjsidelobex.setValue(value)
-        self.update_pattern()
-
-    def adjsidelobex_hs_moved(self, value):
-        self.ui.sb_adjsidelobex.setValue(value)
-        self.update_pattern()
-
-    def adjsidelobey_changed(self, value):
-        self.ui.hs_adjsidelobey.setValue(value)
-        self.update_pattern()
-
-    def adjsidelobey_hs_moved(self, value):
-        self.ui.sb_adjsidelobey.setValue(value)
-        self.update_pattern()
-
-    def az_changed(self, value):
-        self.ui.hs_angleaz.setValue(value * 10)
-        self.update_pattern()
-
-    def el_changed(self, value):
-        self.ui.hs_angleel.setValue(value * 10)
-        self.update_pattern()
-
-    def az_hs_moved(self, value):
-        self.ui.dsb_angleaz.setValue(value / 10)
-        self.update_pattern()
-
-    def el_hs_moved(self, value):
-        self.ui.dsb_angleel.setValue(value / 10)
-        self.update_pattern()
-
-    def fix_az_changed(self, value):
-        self.ui.rbhs_azimuth.setValue(value * 10)
-        self.update_pattern()
-
-    def fix_el_changed(self, value):
-        self.ui.rbhs_elevation.setValue(value * 10)
-        self.update_pattern()
-
-    def fix_az_hs_moved(self, value):
-        self.ui.rbsb_azimuth.setValue(value / 10)
-        self.update_pattern()
-
-    def fix_el_hs_moved(self, value):
-        self.ui.rbsb_elevation.setValue(value / 10)
-        self.update_pattern()
 
     def rb_azimuth_clicked(self):
         self.fix_azimuth = True
@@ -808,7 +870,6 @@ class radeye(QMainWindow):
             self.remove_antenna()
             self.antennas = []
 
-        print(antennas[0].objectName())
         if any(word in antennas[0].objectName() for word in ["ll", "lr"]):
             self.antennas = counterclockwise_phasearray_index(antennas, 2)
         else:
@@ -819,7 +880,6 @@ class radeye(QMainWindow):
             self.ui.channelGrid.addWidget(self.antennas[i], int(i / 2), i % 2)
 
     def remove_antenna(self) -> None:
-        print(self.antennas)
         for i in range(0, len(self.antennas)):
             self.ui.channelGrid.removeWidget(self.antennas[i])
             self.antennas[i].hide()
@@ -877,7 +937,8 @@ class radeye(QMainWindow):
     
     def change_display_comport(self) -> None:
         comport =  self.patch_bind_address.get(self.activatedPatch)
-        self.ui.comPortSelect.setCurrentText(comport.portName())
+        if comport is not None:
+            self.ui.comPortSelect.setCurrentText(comport.portName())
 
     def update_comport_list(self) -> None:
         self.ui.comPortSelect.clear()
@@ -921,7 +982,102 @@ class radeye(QMainWindow):
     """On value changed basis"""
     # after antena config is changed, find it's patch and update it, with the new value
 
+    def export_phasearray_config(self):
+        fileName = QFileDialog.getSaveFileName(
+            self, 'Export array config ...', 'array_config.toml',
+            'All Files (*);;TOML files (*.toml)')
+        
+        document = self.pack_phasearray_config()
+        with  open(fileName[0], 'w') as file:
+            file.write(tomlkit.dumps(document))
+            file.close()
+            
 
+    def pack_phasearray_config(self):
+        doc = tomlkit.document()
+        config = tomlkit.table()
+        for param in self.array_config:
+            config.add(param, self.array_config.get(param))
+        
+        doc.add('config', config)
+        rows = self.array_config.get('size_x')/4 
+        columns = self.array_config.get('size_y')/4
+        params = ['gain','offset','exgain','atten']
+        doc['patch'] = tomlkit.aot()
+        
+        for i in range(int(rows * columns)) :
+            patch = {}
+            keys = self.patches[i].keys
+            for key in keys:
+                # placement
+                placement = {}
+                for index,anttenna in enumerate(self.patches[i].array.get(key)):
+                    # channel
+                    channel = {}
+                    for name in params:
+                        channel[name] = anttenna.config.get(name)
+                    placement['channel{}'.format(index+1)] = channel  
+                patch[key] = placement
+            doc['patch'].append(patch)
+            
+                
+        return doc
+            
+            
+            
+            
+        
+
+
+    def import_phasearray_config(self)-> tomlkit.document():
+        fileName = QFileDialog.getOpenFileName(
+            self, "OpenFile",os.path.abspath(os.path.join(os.path.dirname(__file__))),
+            'All Files (*);;TOML files (*.toml)')
+        
+
+        with  open(fileName[0], 'r') as file:
+            doc = tomlkit.parse(file.read())
+            file.close()
+        
+        loaded_array_config,loaded_patch_config = self.unpack_phasearray_config(doc)
+        for key in loaded_array_config:
+            self.array_config[key] = loaded_array_config[key]
+        
+        # apply configuration from doc
+        num_elements = len(loaded_patch_config)
+        self.update_patch()
+        for i in range(num_elements):
+            self.patches[i] 
+            for key in self.patches[i].keys:
+                for index,antenna in enumerate(self.patches[i].array[key]):
+                    for name in loaded_patch_config[i][key]['channel{}'.format(index+1)]:
+                        antenna.update_variable(name, loaded_patch_config[i][key]['channel{}'.format(index+1)][name])
+        
+        
+    
+    def unpack_phasearray_config(self,doc: tomlkit.document()):
+        # turn array config to format easier to apply
+        array_config = doc['config']
+        patch_config = doc['patch']
+        
+        return array_config, patch_config
+    
+    
+    def _dumps_value(self,value):
+        match value:
+            case bool():
+                return "true" if value else "false"
+            case float() | int():
+                return str(value)
+            case str():
+                return f'"{value}"'
+            case list():
+                return f"[{', '.join(self._dumps_value(v) for v in value)}]"
+            case _:
+                raise TypeError(
+                    f"{type(value).__name__} {value!r} is not supported"
+                )
+        
         
     
     def change_polarization(self, direction) -> None:
@@ -1049,12 +1205,6 @@ def main():
     app = QApplication(sys.argv)
     window = radeye()
 
-    # textedits = [window.ui.addressText,window.ui.portText,window.ui.sizeText,window.ui.sampleRateText]
-    # assignPlaceHolderText = lambda obj: obj.setPlainText(obj.placeholderText())
-    # for te in textedits:
-    #     assignPlaceHolderText(te)
-    # filter = MousePressEventFilter()
-    # window.installEventFilter(filter)
     waveform.dataChanged.connect(lambda x, y: plot_waveform(x, y))
     # apply_stylesheet(app, theme='dark_teal.xml')
     sys.exit(app.exec())

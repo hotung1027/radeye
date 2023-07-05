@@ -24,13 +24,13 @@ class MousePressEventFilter(QObject):
 
             p = event.position()
             (x,y)=p.x(),p.y()
-            print(x,y)
+    
             geom = object.property('geometry')
             (w,h) = np.array([geom.width(),geom.height()])/4
             xv,yv = np.meshgrid([1,3],[1,3])
             ps = np.dstack((xv.flatten(),yv.flatten())) 
             dist = np.sqrt(np.sum(np.power([x,y]-ps * [w,h],2) ,axis=2))
-            print(ps[dist < 50].squeeze())
+
             
 
         return super(MousePressEventFilter, self).eventFilter(object, event)
