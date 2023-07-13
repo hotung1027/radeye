@@ -145,6 +145,7 @@ class Serializer(object):
         except OverflowError as e:
             error(e)
         finally:
+            print(result)
             return result
 
 
@@ -202,7 +203,6 @@ class Subscriber(QObject):
     def bind_port(self, port):
         port.readyRead.connect(self.pool)
         self.port_pool.append(port)
-        
 
     def update_port(self, ports):
         self.port_pool = ports
@@ -287,7 +287,6 @@ class QSerialPortManger(object):
         # use port as key to lookup patch, as port are persistent
         self.connect(port)
         self.port_table.update({port: patch})
-        
 
     # read bytes data from serial port and decode into dictionary
     def read(self, port, byte_data: bytearray) -> dict:
@@ -304,7 +303,8 @@ class QSerialPortManger(object):
         Bind all matching available ports to the serial object
         """
         # We are using STM32 MCU, so we filter out all ports that are not matching
-        available_ports = filter_ports_by_manufacturer(get_all_ports(), FILTER_KEYWORDS)
+        # available_ports = filter_ports_by_manufacturer(get_all_ports(), FILTER_KEYWORDS)
+        available_ports = get_all_ports()
         if len(available_ports) == 0:
             warning("No available ports found")
             return
@@ -324,6 +324,7 @@ def connect_port(portInfo):
         try:
             serialport.setPort(portInfo)
             serialport.open()
+            serialport.setBaudRate(QSerialPort.BaudRate.Baud115200)
         except:
             error("Error: Could not connect to port")
             # Not implemented yet

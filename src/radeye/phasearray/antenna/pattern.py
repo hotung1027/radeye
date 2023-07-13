@@ -6,22 +6,25 @@ import numpy as np
 from radeye.phasearray.antenna.antenna import AntennaArray
 from radeye.phasearray.window import window_fns
 
+
 class CalPattern(QObject):
-    patternReady = Signal(np.ndarray, np.ndarray,
-                          np.ndarray, np.ndarray, np.ndarray, np.ndarray)
+    patternReady = Signal(
+        np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray
+    )
     configUpdated = Signal()
     windowWeightChanged = Signal(np.ndarray)
     new_data = False
 
     def __init__(self):
         super(CalPattern, self).__init__()
-        self.win_type = dict(zip(range(len(window_fns)),window_fns.keys()))
+        self.win_type = dict(zip(range(len(window_fns)), window_fns.keys()))
         self.sizex = 64
         self.sizey = 1
         self.spacingx = 0.5
         self.spacingy = 0.5
         self.rect_array = AntennaArray(
-            self.sizex, self.sizey, self.spacingx, self.spacingy)
+            self.sizex, self.sizey, self.spacingx, self.spacingy
+        )
         self.beam_az = 0
         self.beam_el = 0
         self.u = np.linspace(-1, 1, num=101, endpoint=True)
@@ -33,33 +36,33 @@ class CalPattern(QObject):
         self.nbarx = 20
         self.nbary = 20
         self.new_data = False
-        self.plot = 'Cartesian'
+        self.plot = "Cartesian"
 
     def update_config(self, linear_array_config):
-        
-        self.sizex = linear_array_config.get('size_x', 64)
-        self.sizey = linear_array_config.get('size_y', 64)
-        self.spacingx = linear_array_config.get('spacing_x',0.5)
-        self.spacingy = linear_array_config.get('spacing_y', 0.5)
-        self.beam_az = linear_array_config.get('beam_az',0)
-        self.beam_el = linear_array_config.get('beam_el', 0)
-        self.windowx = linear_array_config.get('windowx',0)
-        self.windowy = linear_array_config.get('windowy', 0)
-        self.sllx = linear_array_config.get('sllx',60)
-        self.slly = linear_array_config.get('slly', 60)
-        self.nbarx = linear_array_config.get('nbarx',20)
-        self.nbary = linear_array_config.get('nbary', 20)
-        self.nfft_az = linear_array_config.get('nfft_az')
-        self.nfft_el = linear_array_config.get('nfft_el')
-        self.plot_az = linear_array_config.get('plot_az')
-        self.plot_el = linear_array_config.get('plot_el')
+        self.sizex = linear_array_config.get("size_x", 64)
+        self.sizey = linear_array_config.get("size_y", 64)
+        self.spacingx = linear_array_config.get("spacing_x", 0.5)
+        self.spacingy = linear_array_config.get("spacing_y", 0.5)
+        self.beam_az = linear_array_config.get("beam_az", 0)
+        self.beam_el = linear_array_config.get("beam_el", 0)
+        self.windowx = linear_array_config.get("windowx", 0)
+        self.windowy = linear_array_config.get("windowy", 0)
+        self.sllx = linear_array_config.get("sllx", 60)
+        self.slly = linear_array_config.get("slly", 60)
+        self.nbarx = linear_array_config.get("nbarx", 20)
+        self.nbary = linear_array_config.get("nbary", 20)
+        self.nfft_az = linear_array_config.get("nfft_az")
+        self.nfft_el = linear_array_config.get("nfft_el")
+        self.plot_az = linear_array_config.get("plot_az")
+        self.plot_el = linear_array_config.get("plot_el")
         self.new_data = True
         self.rect_array.update_parameters(
-            size_x=self.sizex, size_y=self.sizey, spacing_x=self.spacingx,
-            spacing_y=self.spacingy)
+            size_x=self.sizex,
+            size_y=self.sizey,
+            spacing_x=self.spacingx,
+            spacing_y=self.spacingy,
+        )
         self.configUpdated.emit()
-        
-   
 
     @Slot()
     def cal_pattern(self):
@@ -78,53 +81,55 @@ class CalPattern(QObject):
                 slly=self.slly,
                 nbary=self.nbary,
                 plot_az=self.plot_az,
-                plot_el=self.plot_el
+                plot_el=self.plot_el,
             )
 
-            AF = 20 * np.log10(np.abs(AF_data['array_factor']) + 0.00001)
+            AF = 20 * np.log10(np.abs(AF_data["array_factor"]) + 0.00001)
 
             x = self.rect_array.x
             y = self.rect_array.y
-    
-            weight = AF_data['weight'].ravel()
-            self.windowWeightChanged.emit(AF_data['window'])
-            self.patternReady.emit(
-                AF_data['azimuth'], AF_data['elevation'], AF, x, y, weight)
 
+            weight = AF_data["weight"].ravel()
+            self.windowWeightChanged.emit(AF_data["window"])
+            self.patternReady.emit(
+                AF_data["azimuth"], AF_data["elevation"], AF, x, y, weight
+            )
 
 
 def calculate_phaseshift(params, theta, phi):
-    pi      = np.pi
-    theta   *= pi / 180
-    phi     *= pi / 180
-    
-    
+    pi = np.pi
+    theta *= pi / 180
+    phi *= pi / 180
+
     elements_x = params["size_x"]
     elements_y = params["size_y"]
-    
+
     space_x = params["spacing_x"]  # in ratio of wavelength, n * lambda
     space_y = params["spacing_y"]  # in ratio of wavelength, m * lambda
 
-    x = np.linspace(- 0, elements_x  , elements_x) .reshape(-1,1)
-    y = np.linspace(- 0, elements_y , elements_y) 
-    
-    progressive_phaseshift_x = 2 * pi * space_x  * np.sin(theta)
-    progressive_phaseshift_y = 2 * pi * space_y  * np.sin(phi)
+    x = np.linspace(-0, elements_x, elements_x).reshape(-1, 1)
+    y = np.linspace(-0, elements_y, elements_y)
+
+    progressive_phaseshift_x = 2 * pi * space_x * np.sin(theta)
+    progressive_phaseshift_y = 2 * pi * space_y * np.sin(phi)
     """
     e^x *e^y = e^(x+y) 
     ln(e^x * e^y) = (x+y)ln(e) = x+y
     thus we obtain the progressive phaseshift map
     """
-    phaseshift = np.exp(x * progressive_phaseshift_x) * np.exp(y * progressive_phaseshift_y)     
-    
-    phaseshift = - np.transpose(np.log(phaseshift)) * 180 / pi
+    phaseshift = np.exp(x * progressive_phaseshift_x) * np.exp(
+        y * progressive_phaseshift_y
+    )
+
+    phaseshift = -np.transpose(np.log(phaseshift)) * 180 / pi
 
     phaseshift = phaseshift - np.min(phaseshift)
 
     # print(phaseshift)
     return phaseshift
 
-def convert_phase(phase,offset):
+
+def convert_phase(phase, offset):
     """
     phase: 2d array in degree
     offset: 2d array in degrees
@@ -133,11 +138,11 @@ def convert_phase(phase,offset):
     phase = phase % 360
     try:
         if phase.shape[0] == 1:
-            phase = phase + 360 *(phase < 180) - 360 * (phase > 180)
+            phase = phase + 360 * (phase < 180) - 360 * (phase > 180)
         else:
             phase[phase > 180] = phase[phase > 180] - 360
             phase[phase < -180] = phase[phase < -180] + 360
     except:
         Warning("phase is not a numpy array")
-        
+
     return phase
