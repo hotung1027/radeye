@@ -7,6 +7,8 @@ from typing import Optional
 import time
 import logging
 import itertools
+import functools
+from functools import partial
 from logging import debug, warning, error, info
 
 
@@ -43,7 +45,8 @@ from PySide6.QtCore import (
     QEvent,
     QUrl,
 )
-from PySide6.QtWebEngineWidgets import QWebEngineView
+
+# from PySide6.QtWebEngineWidgets import QWebEngineView
 from PySide6.QtGui import QIcon, QPixmap, QMouseEvent
 
 # from PySide6.QtOpenGLWidgets import QOpenGLWidget
@@ -121,8 +124,8 @@ class radeye(QMainWindow):
                     self.ui.dsb_spacingy.value(),
                     self.ui.dsb_angleaz.value(),
                     self.ui.dsb_angleel.value(),
-                    self.ui.cb_windowx.currentText(),
-                    self.ui.cb_windowy.currentText(),
+                    self.ui.cb_windowx.currentIndex(),
+                    self.ui.cb_windowy.currentIndex(),
                     self.ui.sb_sidelobex.value(),
                     self.ui.sb_sidelobey.value(),
                     self.ui.sb_adjsidelobex.value(),
@@ -137,9 +140,9 @@ class radeye(QMainWindow):
         """Serial port panel"""
         self.serial_manager = QSerialPortManger(["phase", "gain"], REGISTER_MAP)
         self.comports = {}
+        self.patch_bind_address = {}
         self.ui.findComPortButton.clicked.connect(self.update_comport_list)
         self.ui.comPortSelect.currentIndexChanged.connect(self.bind_comport_to_patch)
-        self.patch_bind_address = {}
         self.ui.led.clicked.connect(lambda: self.lightup_patch(self.activatedPatch))
 
         """Data Acquisition panel"""
@@ -159,19 +162,19 @@ class radeye(QMainWindow):
         self.ui.runButton.clicked.connect(self.RUN)
         self.ui.sizeText.editingFinished.connect(self.client.update_size)
 
-        self.ui.verticalLayout.removeWidget(self.ui.processView)
-        self.ui.verticalLayout.removeWidget(self.ui.dataView)
-        self.ui.processView.hide()
-        self.ui.dataView.hide()
-        self.ui.processView = QWebEngineView(self.ui.RxPanel)
-        self.ui.processView.setObjectName("processView")
-        self.ui.verticalLayout.addWidget(self.ui.processView)
+        # self.ui.verticalLayout.removeWidget(self.ui.processView)
+        # self.ui.verticalLayout.removeWidget(self.ui.dataView)
+        # self.ui.processView.hide()
+        # self.ui.dataView.hide()
+        # self.ui.processView = QWebEngineView(self.ui.RxPanel)
+        # self.ui.processView.setObjectName("processView")
+        # self.ui.verticalLayout.addWidget(self.ui.processView)
 
-        self.ui.dataView = QWebEngineView(self.ui.RxPanel)
-        self.ui.dataView.setObjectName("dataView")
-        self.ui.verticalLayout.addWidget(self.ui.dataView)
-        self.ui.dataView.show()
-        self.ui.processView.show()
+        # self.ui.dataView = QWebEngineView(self.ui.RxPanel)
+        # self.ui.dataView.setObjectName("dataView")
+        # self.ui.verticalLayout.addWidget(self.ui.dataView)
+        # self.ui.dataView.show()
+        # self.ui.processView.show()
 
         self.timer = QTimer()
         self.timer.timeout.connect(self.RUN)
@@ -282,7 +285,8 @@ class radeye(QMainWindow):
             "beam_az",
             "beam_el",
             "windowx",
-            "windowy" "sllx",
+            "windowy",
+            "sllx",
             "slly",
             "nbarx",
             "nbary",
@@ -312,11 +316,12 @@ class radeye(QMainWindow):
             "rbsb_azimuth",
             "rbsb_elevation",
         ]
-        
         update_config = lambda name: call(self.update_array_config, name, lambda x: x)
-        for var, name in zip(self.variables, self.array_widget):
-            getattr(self.ui, name).valueChanged.connect(update_config(var))
-
+        # for var, widget_name in zip(self.variables, self.array_widget):
+        #     if widget_name in ["cb_windowx", "cb_windowy"]:
+        #         getattr(self.ui, widget_name).currentIndexChanged.connect(fn)
+        #     else:
+        #         getattr(self.ui, widget_name).valueChanged.connect(fn)
 
         """ phase angle"""
         for name in ["dsb_angleaz", "dsb_angleel"]:
@@ -352,13 +357,13 @@ class radeye(QMainWindow):
         div_value = lambda name: change_value(name, lambda x: x / 10)
         same_value = lambda name: change_value(name, lambda x: x)
 
-        for hs, dsb in zip(hs_angle, dsb_angle):
-            getattr(self.ui, hs).valueChanged.connect(div_value(dsb))
-            getattr(self.ui, dsb).valueChanged.connect(mult_value(hs))
+        # for hs, dsb in zip(hs_angle, dsb_angle):
+        #     getattr(self.ui, hs).valueChanged.connect(div_value(dsb))
+        #     getattr(self.ui, dsb).valueChanged.connect(mult_value(hs))
 
-        for hs, sb in zip(hs_sidelobe, sb_sidelobe):
-            getattr(self.ui, hs).valueChanged.connect(same_value(sb))
-            getattr(self.ui, sb).valueChanged.connect(same_value(hs))
+        # for hs, sb in zip(hs_sidelobe, sb_sidelobe):
+        #     getattr(self.ui, hs).valueChanged.connect(same_value(sb))
+        #     getattr(self.ui, sb).valueChanged.connect(same_value(hs))
 
         """Plot"""
         self.ui.cb_plottype.addItems(self.plot_list)
@@ -367,8 +372,8 @@ class radeye(QMainWindow):
         self.ui.rb_azimuth.clicked.connect(self.rb_azimuth_clicked)
         self.ui.rb_elevation.clicked.connect(self.rb_elevation_clicked)
 
-        self.ui.rbsb_azimuth.valueChanged.connect(self.plot_az_changed)
-        self.ui.rbsb_elevation.valueChanged.connect(self.plot_el_changed)
+        # self.ui.rbsb_azimuth.valueChanged.connect(self.plot_az_changed)
+        # self.ui.rbsb_elevation.valueChanged.connect(self.plot_el_changed)
 
         self.ui.spinBox_polarMinAmp.valueChanged.connect(
             self.polar_min_amp_value_changed
@@ -383,7 +388,6 @@ class radeye(QMainWindow):
 
         self.ui.actionExport.triggered.connect(self.export_phasearray_config)
         self.ui.actionImport.triggered.connect(self.import_phasearray_config)
-
 
         """add to save config and load config
         """
@@ -429,6 +433,7 @@ class radeye(QMainWindow):
         self.window_config("y", window_idx)
 
     def update_pattern(self) -> None:
+        print(self.array_config)
         self.calpattern.update_config(self.array_config)
 
     def update_uipattern(self, attr, value):
@@ -813,10 +818,10 @@ class radeye(QMainWindow):
                 lambda data: self.adjust_antenna(self.patches[i], data)
             )
             self.patches[i].changedActivatedElement.connect(self.change_display_antenna)
-            self.patches[i].changedActivatedElement.connect(self.change_display_comport)
             # TODO : clicked patch
             self.patches[i].clicked.connect(self.assign_patch)
             # TODO: reassign ComPorts
+            self.patches[i].clicked.connect(self.change_display_comport)
 
             self.ui.panelGrid.addWidget(
                 self.patches[i],
@@ -858,12 +863,12 @@ class radeye(QMainWindow):
         self.ui.comPortSelect.addItems(list(self.comports.keys()))
 
     def bind_comport_to_patch(self, index) -> None:
-        port_name = self.ui.comPortSelector.itemData(index)
+        port_name = self.ui.comPortSelect.currentText()
         comport = self.comports.get(port_name, None)
         if comport is not None:
             self.patch_bind_address.update({self.activatedPatch: comport})
             # add comport to serialport manager
-            self.serial_manager.bind_serial(comport, self.activatedPatch)
+            self.serial_manager.bind(comport, self.activatedPatch)
 
         else:
             debug("Comport might have been lost due to connection or update")
@@ -1035,40 +1040,40 @@ def plot_waveform(x, y):
     fs = convertUnit(window.ui.sampleRateText.text())
     bandwidth = convertUnit(window.ui.bandWidthText.text())
     pulsewidth = convertUnit(window.ui.pulseWidthText.text())
-    data_layout = plo.Layout(
-        xaxis={"title": {"text": "time(ns)"}},
-        yaxis={"title": {"text": "Voltage (V)"}},
-        title="Waveform",
-        showlegend=False,
-    )
-    process_layout = plo.Layout(
-        xaxis={"title": {"text": "Frequency (Hz)"}},
-        yaxis={"title": {"text": "Power (dB)"}},
-        title="Power Spectrum",
-        showlegend=False,
-    )
-    plotly_js_path = os.path.abspath(
-        os.path.join(os.path.dirname(__file__), "plotly-latest.min.js")
-    )
-    plotly_js = QUrl.fromLocalFile(plotly_js_path).toString()
+    # data_layout = plo.Layout(
+    #     xaxis={"title": {"text": "time(ns)"}},
+    #     yaxis={"title": {"text": "Voltage (V)"}},
+    #     title="Waveform",
+    #     showlegend=False,
+    # )
+    # process_layout = plo.Layout(
+    #     xaxis={"title": {"text": "Frequency (Hz)"}},
+    #     yaxis={"title": {"text": "Power (dB)"}},
+    #     title="Power Spectrum",
+    #     showlegend=False,
+    # )
+    # plotly_js_path = os.path.abspath(
+    #     os.path.join(os.path.dirname(__file__), "plotly-latest.min.js")
+    # )
+    # plotly_js = QUrl.fromLocalFile(plotly_js_path).toString()
 
-    plot = lambda x, y, layout: plo.Figure(data=px.line(x=x, y=y), layout=layout)
+    # plot = lambda x, y, layout: plo.Figure(data=px.line(x=x, y=y), layout=layout)
     try:
         x = np.array(x) / fs
-        df = pd.DataFrame(data={"time (ns)": x, "Voltage (V)": y})
-        fig = px.line(df, x="time (ns)", y="Voltage (V)", title="Waveform")
-        raw_html = '<html><head><meta charset="utf-8" />'
+        # df = pd.DataFrame(data={"time (ns)": x, "Voltage (V)": y})
+        # fig = px.line(df, x="time (ns)", y="Voltage (V)", title="Waveform")
+        # raw_html = '<html><head><meta charset="utf-8" />'
 
-        raw_html += "<body>"
-        raw_html += "<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>"
-        raw_html += '<script charset="utf-8" src="{}"></script>'.format(plotly_js_path)
-        raw_html += pyo.plot(fig, include_plotlyjs="cdn", output_type="div")
-        raw_html += "</body></html>"
+        # raw_html += "<body>"
+        # raw_html += "<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>"
+        # raw_html += '<script charset="utf-8" src="{}"></script>'.format(plotly_js_path)
+        # raw_html += pyo.plot(fig, include_plotlyjs="cdn", output_type="div")
+        # raw_html += "</body></html>"
 
-        window.ui.dataView.setHtml(raw_html)
-        window.ui.dataView.show()
+        # window.ui.dataView.setHtml(raw_html)
+        # window.ui.dataView.show()
 
-        # window.ui.dataView.plotItem.plot(x, y, clear=True)
+        window.ui.dataView.plotItem.plot(x, y, clear=True)
         y_fft = np.fft.rfft(y)
 
         L = len(y_fft)
@@ -1077,20 +1082,20 @@ def plot_waveform(x, y):
         r = speed_of_light * pulsewidth / (2 * bandwidth) * f
         db = 20 * np.log10(p2)
 
-        df = pd.DataFrame(data={"Range (m)": r, "Power (dB)": db})
-        fig = px.line(df, x="Range (m)", y="Power (dB)", title="Range Profile")
-        raw_html = '<html><head><meta charset="utf-8" />'
-        raw_html += "<body>"
-        raw_html += "<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>"
-        raw_html += '<script charset="utf-8" src="{}"></script>'.format(plotly_js_path)
-        raw_html += pyo.plot(fig, include_plotlyjs="cdn", output_type="div")
-        raw_html += "</body></html>"
+        # df = pd.DataFrame(data={"Range (m)": r, "Power (dB)": db})
+        # fig = px.line(df, x="Range (m)", y="Power (dB)", title="Range Profile")
+        # raw_html = '<html><head><meta charset="utf-8" />'
+        # raw_html += "<body>"
+        # raw_html += "<script type=\"text/javascript\">window.PlotlyConfig = {MathJaxConfig: 'local'};</script>"
+        # raw_html += '<script charset="utf-8" src="{}"></script>'.format(plotly_js_path)
+        # raw_html += pyo.plot(fig, include_plotlyjs="cdn", output_type="div")
+        # raw_html += "</body></html>"
 
-        window.ui.processView.setHtml(raw_html)
-        window.ui.processView.show()
-        # window.ui.processView.plotItem.plot(range, db, clear=True)
-        # window.ui.processView.plotItem.setLabel("left", "Amplitude (dB)")
-        # window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
+        # window.ui.processView.setHtml(raw_html)
+        # window.ui.processView.show()
+        window.ui.processView.plotItem.plot(range, db, clear=True)
+        window.ui.processView.plotItem.setLabel("left", "Amplitude (dB)")
+        window.ui.processView.plotItem.setLabel("bottom", "Range (m)")
     finally:
         waveform.flush()
 
